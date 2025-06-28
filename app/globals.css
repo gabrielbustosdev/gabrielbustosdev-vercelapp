@@ -1,2 +1,45 @@
 @import "tailwindcss";
 
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-400 via-slate-300 to-zinc-300 bg-clip-text text-transparent;
+  }
+
+  .bg-metallic {
+    @apply bg-gradient-to-r from-slate-600 to-zinc-600;
+  }
+
+  .text-metallic {
+    @apply bg-gradient-to-r from-slate-400 to-zinc-400 bg-clip-text text-transparent;
+  }
+
+  .border-metallic {
+    @apply border-slate-500/30;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+  
