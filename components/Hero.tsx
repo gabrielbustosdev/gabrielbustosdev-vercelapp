@@ -1,9 +1,15 @@
 "use client"
 
+import { useState } from "react"
 import { motion } from "motion/react"
 import Image from "next/image"
+import Link from "next/link"
+import ConsultationModal from "./ConsultationModal"
 
 export default function Hero() {
+
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   const techStack = [
     {
       name: "Next.js",
@@ -104,7 +110,7 @@ export default function Hero() {
   const duplicatedAI = [...aiTools, ...aiTools]
 
   return (
-    <section id="inicio" className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-slate-800 pt-16">
+    <section id="inicio" className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-slate-800 py-32">
       <div className="max-w-7xl mx-auto text-center">
         <div className="space-y-8">
           {/* Heading */}
@@ -153,10 +159,16 @@ export default function Hero() {
             transition={{ delay: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <button className="bg-gradient-to-r from-blue-500 to-slate-600 text-white px-8 py-4 rounded-full hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold text-lg shadow-lg">
+            <Link
+              href={"/portafolio"}
+              className="bg-gradient-to-r from-blue-500 to-slate-600 text-white px-8 py-4 rounded-full hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold text-lg shadow-lg"
+            >
               Ver mi Portafolio
-            </button>
-            <button className="border border-white/20 text-white px-8 py-4 rounded-full hover:bg-white/10 transition-all duration-300 font-semibold text-lg">
+            </Link>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-full sm:w-auto border border-white/20 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-white/10 transition-all duration-300 font-semibold text-base sm:text-lg backdrop-blur-sm"
+            >
               Agendar Consulta
             </button>
           </motion.div>
@@ -289,6 +301,9 @@ export default function Hero() {
         <div className="absolute top-1/3 right-10 w-32 h-32 bg-slate-500/10 rounded-full blur-xl animate-pulse delay-1000"></div>
         <div className="absolute bottom-1/4 left-1/4 w-16 h-16 bg-zinc-500/10 rounded-full blur-xl animate-pulse delay-500"></div>
       </div>
+
+      {/* Modal */}
+      <ConsultationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   )
 }

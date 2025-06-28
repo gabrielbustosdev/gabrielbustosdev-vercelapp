@@ -1,11 +1,59 @@
-import type { Metadata } from "next"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Contacto - Gabriel Bustos",
-  description: "Ponte en contacto conmigo para discutir tu próximo proyecto de desarrollo web o IA",
-}
+import type React from "react"
+
+import { useState } from "react"
 
 export default function ContactoPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    company: "",
+    project: "",
+    message: "",
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSubmitStatus("idle")
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (response.ok) {
+        setSubmitStatus("success")
+        setFormData({
+          name: "",
+          email: "",
+          company: "",
+          project: "",
+          message: "",
+        })
+      } else {
+        setSubmitStatus("error")
+      }
+    } catch (error) {
+      console.error("Error:", error)
+      setSubmitStatus("error")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-slate-800 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -24,7 +72,7 @@ export default function ContactoPage() {
           {/* Contact Form */}
           <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-8">
             <h2 className="text-2xl font-bold text-white mb-6">Envíame un mensaje</h2>
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
                   Nombre completo
@@ -32,6 +80,10 @@ export default function ContactoPage() {
                 <input
                   type="text"
                   id="name"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="Tu nombre"
                 />
@@ -44,6 +96,10 @@ export default function ContactoPage() {
                 <input
                   type="email"
                   id="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="tu@email.com"
                 />
@@ -56,6 +112,9 @@ export default function ContactoPage() {
                 <input
                   type="text"
                   id="company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="Tu empresa"
                 />
@@ -67,6 +126,9 @@ export default function ContactoPage() {
                 </label>
                 <select
                   id="project"
+                  name="project"
+                  value={formData.project}
+                  onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 >
                   <option value="">Selecciona una opción</option>
@@ -83,17 +145,37 @@ export default function ContactoPage() {
                 </label>
                 <textarea
                   id="message"
+                  name="message"
                   rows={5}
+                  required
+                  value={formData.message}
+                  onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
                   placeholder="Cuéntame sobre tu proyecto..."
                 ></textarea>
               </div>
 
+              {/* Status Messages */}
+              {submitStatus === "success" && (
+                <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
+                  <p className="text-green-400 text-center">¡Mensaje enviado exitosamente! Te contactaré pronto.</p>
+                </div>
+              )}
+
+              {submitStatus === "error" && (
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
+                  <p className="text-red-400 text-center">
+                    Hubo un error al enviar el mensaje. Por favor, intenta nuevamente.
+                  </p>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-slate-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-blue-500 to-slate-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Enviar Mensaje
+                {isSubmitting ? "Enviando..." : "Enviar Mensaje"}
               </button>
             </form>
           </div>
