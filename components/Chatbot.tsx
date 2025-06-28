@@ -134,7 +134,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
       }
 
       setMessages((prev) => [...prev, assistantMessage])
-    } catch (error) {
+    } catch (_error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content:
