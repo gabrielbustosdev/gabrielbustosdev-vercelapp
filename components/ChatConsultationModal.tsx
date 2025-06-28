@@ -53,13 +53,6 @@ export default function ChatConsultationModal({
     }
   }, [conversationData])
 
-  // Generar resumen de la conversación cuando se abre el modal
-  useEffect(() => {
-    if (isOpen && conversationData) {
-      generateConversationSummary()
-    }
-  }, [isOpen, conversationData])
-
   const generateConversationSummary = () => {
     const summary = []
     
@@ -87,6 +80,13 @@ export default function ChatConsultationModal({
       setConversationSummary(summary.join('. ') + '.')
     }
   }
+
+  // Generar resumen de la conversación cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && conversationData) {
+      generateConversationSummary()
+    }
+  }, [isOpen, conversationData, generateConversationSummary])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -136,7 +136,7 @@ export default function ChatConsultationModal({
       } else {
         setError(result.error || "Error al enviar la consulta")
       }
-    } catch (err) {
+    } catch {
       setError("Error de conexión. Por favor, inténtalo de nuevo.")
     } finally {
       setIsSubmitting(false)

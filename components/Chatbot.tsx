@@ -89,7 +89,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     const userMessages = messages.filter(m => m.role === 'user')
     const assistantMessages = messages.filter(m => m.role === 'assistant')
     
-    let extractedData = {
+    const extractedData = {
       name: "",
       email: "",
       projectType: "",
