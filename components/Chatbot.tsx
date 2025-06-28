@@ -263,6 +263,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     setShowConsultationModal(false)
   }
 
+  // No mostrar el widget si el chat ya está abierto
   if (!isOpen) {
     return (
       <div className="fixed bottom-6 right-6 z-50">

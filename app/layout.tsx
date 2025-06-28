@@ -27,10 +27,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <Navbar />
-        {children}
-        <Footer />
-        <ChatBotProvider />
+        <ChatBotProvider>
+          <Navbar />
+          {children}
+          <Footer />
+        </ChatBotProvider>
       </body>
     </html>
   );
