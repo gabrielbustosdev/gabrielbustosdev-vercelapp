@@ -167,7 +167,7 @@ export default function Hero() {
             </Link>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full sm:w-auto border border-white/20 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full hover:bg-white/10 transition-all duration-300 font-semibold text-base sm:text-lg backdrop-blur-sm"
+              className="border border-white/20 text-white px-8 py-4 rounded-full hover:bg-white/10 transition-all duration-300 font-semibold text-base sm:text-lg backdrop-blur-sm"
             >
               Agendar Consulta
             </button>
