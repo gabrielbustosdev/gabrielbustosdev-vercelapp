@@ -57,8 +57,8 @@ export default function Hero() {
 
   const aiTools = [
     {
-      name: "OpenAI",
-      icon: "/tech/OpenAI.svg",
+      name: "Pandas",
+      icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg",
     },
     {
       name: "Python",
@@ -77,17 +77,14 @@ export default function Hero() {
       icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jupyter/jupyter-original.svg",
     },
     {
+      name: "OpenAI",
+      icon: "/tech/OpenAI.svg",
+    },
+    {
       name: "FastAPI",
       icon: "/tech/fastapi.svg",
     },
-    {
-      name: "Pandas",
-      icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg",
-    },
-    {
-      name: "NumPy",
-      icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/numpy/numpy-original.svg",
-    },
+
     {
       name: "Anaconda",
       icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/anaconda/anaconda-original.svg",
@@ -96,6 +93,10 @@ export default function Hero() {
       name: "Keras",
       icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/keras/keras-original.svg",
     },
+    {
+      name: "NumPy",
+      icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/numpy/numpy-original.svg",
+    },
   ]
 
   // Duplicar arrays para efecto infinito
@@ -103,43 +104,62 @@ export default function Hero() {
   const duplicatedAI = [...aiTools, ...aiTools]
 
   return (
-    <section id="inicio" className="py-32 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <section id="inicio" className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-slate-800 pt-16">
       <div className="max-w-7xl mx-auto text-center">
         <div className="space-y-8">
-          {/* Main Heading */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight">
-            Desarrollo{" "}
+          {/* Heading */}
+          <motion.h1
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight"
+          >
+            Sitios Web Modernos <br />
             <span className="bg-gradient-to-r from-blue-400 via-slate-300 to-zinc-300 bg-clip-text text-transparent">
-              Soluciones AI
+              con IA Integrada
             </span>
-            <br />
-            que Transforman Negocios
-          </h1>
+            <br /> que potencian tu negocio
+          </motion.h1>
 
-          {/* Subtitle */}
-          <p className="text-xl sm:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
-            Creo sitios web modernos y aplicaciones que integran inteligencia artificial para automatizar procesos,
-            mejorar la experiencia del usuario y potenciar el crecimiento de tu negocio.
-          </p>
+          {/* Subheading */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-lg text-gray-300 px-4"
+          >
+            Desarrollo de sitios web rápidos, escalables y listos para producción, con la posibilidad de integrar chatbots inteligentes y automatización simple con herramientas de IA.
+          </motion.p>
+
 
           {/* Tech Stack */}
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-400">
-            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Desarrollo Web</span>
-            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Inteligencia Artificial</span>
-            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Automatización</span>
-            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Chatbots</span>
-            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">APIs Inteligentes</span>
-          </div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-wrap justify-center gap-4 text-sm text-gray-400"
+          >
+            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Next.js + Vercel</span>
+            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Sitios Web Profesionales</span>
+            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Chatbots Integrados</span>
+            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Automatización con APIs</span>
+            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Experiencia Optimizada</span>
+          </motion.div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-            <button className="bg-gradient-to-r from-blue-500 to-slate-600 text-white px-8 py-4 rounded-full hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          >
+            <button className="bg-gradient-to-r from-blue-500 to-slate-600 text-white px-8 py-4 rounded-full hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold text-lg shadow-lg">
               Ver mi Portafolio
             </button>
-            <button className="border border-white/20 text-white px-8 py-4 rounded-full hover:bg-white/10 transition-all duration-300 font-semibold text-lg backdrop-blur-sm">
+            <button className="border border-white/20 text-white px-8 py-4 rounded-full hover:bg-white/10 transition-all duration-300 font-semibold text-lg">
               Agendar Consulta
             </button>
-          </div>
+          </motion.div>
 
           {/* Technology Carousels */}
           <div className="pt-16 space-y-8 overflow-hidden">
@@ -242,6 +262,27 @@ export default function Hero() {
             </div>
           </div>
         </div>
+
+        {/* Benefits */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mt-12"
+        >
+          {[
+            { title: "Diseño Profesional", desc: "Interfaces limpias, modernas y enfocadas en la experiencia del usuario." },
+            { title: "Integración de Chatbots", desc: "Automatización de consultas frecuentes y atención inmediata con IA." },
+            { title: "Despliegue en Vercel", desc: "Tu web siempre disponible, rápida y lista para escalar." },
+            { title: "Optimización SEO", desc: "Mejor posicionamiento en buscadores y tiempos de carga optimizados." },
+          ].map((item, index) => (
+            <div key={index} className="bg-white/5 p-6 rounded-xl backdrop-blur border border-white/10 hover:bg-white/10 transition-all">
+              <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
+              <p className="text-gray-300 text-sm">{item.desc}</p>
+            </div>
+          ))}
+        </motion.div>
+
 
         {/* Floating Elements */}
         <div className="absolute top-1/4 left-10 w-20 h-20 bg-blue-500/10 rounded-full blur-xl animate-pulse"></div>

@@ -11,10 +11,9 @@ export default function Footer() {
     ]
 
     const services = [
-        { href: "/servicios#desarrollo-web", label: "Desarrollo Web" },
-        { href: "/servicios#integracion-ia", label: "Integración de IA" },
-        { href: "/servicios#consultoria", label: "Consultoría Técnica" },
-        { href: "/servicios#automatizacion", label: "Automatización" },
+        { href: "/servicios#landing-page", label: "Landing Page" },
+        { href: "/servicios#plataforma-web-ia", label: "Plataforma Web con IA" },
+        { href: "/servicios#rebranding", label: "Rebranding" },
     ]
 
     const socialLinks = [
