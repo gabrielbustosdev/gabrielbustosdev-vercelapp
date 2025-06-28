@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 
 export const metadata: Metadata = {
   title: "Portafolio - Gabriel Bustos",
@@ -58,9 +59,11 @@ export default function PortafolioPage() {
               className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden hover:bg-white/10 transition-all duration-300"
             >
               <div className="aspect-video bg-gradient-to-br from-blue-500/20 to-slate-600/20 flex items-center justify-center">
-                <img
+                <Image
                   src={project.image || "/placeholder.svg"}
                   alt={project.title}
+                  width={400}
+                  height={300}
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -131,7 +131,7 @@ export default function PrivacidadPage() {
             <div className="text-gray-300 space-y-4">
               <p>
                 Podemos actualizar esta Política de Privacidad ocasionalmente. Le notificaremos sobre cualquier cambio
-                publicando la nueva política en esta página y actualizando la fecha de "última actualización".
+                publicando la nueva política en esta página y actualizando la fecha de &quot;última actualización&quot;.
               </p>
             </div>
           </section>
