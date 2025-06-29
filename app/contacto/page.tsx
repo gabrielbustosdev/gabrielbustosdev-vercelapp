@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useChat } from "@/components/ChatBotProvider"
+import { useChatbot } from "@/hooks/use-chatbot"
 
 export default function ContactoPage() {
   const [formData, setFormData] = useState({
@@ -15,7 +15,8 @@ export default function ContactoPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
-  const { isChatOpen, openChat } = useChat()
+  const { state, openChat } = useChatbot()
+  const { isOpen: isChatOpen } = state
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target

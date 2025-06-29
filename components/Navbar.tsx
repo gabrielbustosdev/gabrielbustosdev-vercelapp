@@ -3,12 +3,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useChat } from "./ChatBotProvider"
+import { useChatbot } from "../hooks/use-chatbot"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pathname = usePathname()
-  const { isChatOpen, openChat } = useChat()
+  const { state, openChat } = useChatbot()
+  const { isOpen: isChatOpen } = state
 
   const navItems = [
     { href: "/", label: "Inicio" },

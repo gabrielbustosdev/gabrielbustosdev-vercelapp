@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useRef, useEffect, useState } from "react"
-import { useChat } from "ai/react"
+import { useRef, useEffect } from "react"
 import { Bot, User, Send, Loader2, AlertCircle, Calendar } from "lucide-react"
 import ChatConsultationModal from "./ChatConsultationModal"
+import { useChatbot } from "../hooks/use-chatbot"
 
 interface ChatBotProps {
   isOpen: boolean
@@ -15,180 +15,20 @@ interface ChatBotProps {
 export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [showConsultationModal, setShowConsultationModal] = useState(false)
-  const [conversationData, setConversationData] = useState({
-    name: "",
-    email: "",
-    projectType: "",
-    requirements: "",
-    budget: "",
-    timeline: ""
-  })
+  
+  const {
+    state,
+    input,
+    handleInputChange,
+    handleSubmit,
+    reload,
+    showConsultationModal,
+    hideConsultationModal,
+    clearMessages
+  } = useChatbot()
 
-  // Usar el hook useChat del AI SDK
-  const { 
-    messages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, 
-    isLoading, 
-    error, 
-    reload
-  } = useChat({
-    api: "/api/chat",
-    initialMessages: [
-      {
-        id: "welcome",
-        role: "assistant",
-        content: "¡Hola! Soy el asistente de IA de Gabriel Bustos. Puedo ayudarte con información sobre servicios de desarrollo web, integración de IA, consultoría técnica y más. ¿En qué puedo ayudarte hoy?",
-      },
-    ],
-    onError: (error) => {
-      console.error('Chat error:', error)
-    },
-    onFinish: (message) => {
-      // Analizar el mensaje del asistente para detectar oportunidades de consulta
-      analyzeMessageForConsultation(message.content)
-    }
-  })
-
-  // Función para analizar mensajes y detectar oportunidades de consulta
-  const analyzeMessageForConsultation = (content: string) => {
-    const lowerContent = content.toLowerCase()
-    
-    // Detectar si el asistente sugiere abrir automáticamente la consulta
-    if (lowerContent.includes('[auto_open_consultation]')) {
-      // Extraer información de la conversación y abrir modal automáticamente
-      extractConversationData()
-      setTimeout(() => {
-        setShowConsultationModal(true)
-      }, 1000) // Pequeño delay para que el usuario vea la respuesta
-      return
-    }
-    
-    // Detectar si el usuario mostró interés en servicios
-    const hasInterest = lowerContent.includes('interesado') || 
-                       lowerContent.includes('me gustaría') || 
-                       lowerContent.includes('quiero') ||
-                       lowerContent.includes('necesito') ||
-                       lowerContent.includes('proyecto')
-    
-    // Detectar si el asistente sugirió agendar consulta
-    const suggestedConsultation = lowerContent.includes('agendar') || 
-                                 lowerContent.includes('consulta') || 
-                                 lowerContent.includes('contactar')
-    
-    if (hasInterest || suggestedConsultation) {
-      // Extraer información de la conversación
-      extractConversationData()
-    }
-  }
-
-  // Función para extraer datos de la conversación
-  const extractConversationData = () => {
-    const userMessages = messages.filter(m => m.role === 'user')
-    const assistantMessages = messages.filter(m => m.role === 'assistant')
-    
-    const extractedData = {
-      name: "",
-      email: "",
-      projectType: "",
-      requirements: "",
-      budget: "",
-      timeline: ""
-    }
-
-    // Analizar todos los mensajes del usuario para extraer información
-    userMessages.forEach(message => {
-      const content = message.content.toLowerCase()
-      
-      // Extraer nombre
-      const nameMatch = content.match(/(?:me llamo|soy|mi nombre es)\s+([A-Za-zÁáÉéÍíÓóÚúÑñ\s]+)/i)
-      if (nameMatch && !extractedData.name) {
-        extractedData.name = nameMatch[1].trim()
-      }
-      
-      // Extraer email
-      const emailMatch = content.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/)
-      if (emailMatch && !extractedData.email) {
-        extractedData.email = emailMatch[0]
-      }
-      
-      // Extraer tipo de proyecto
-      const projectKeywords = {
-        'landing page': 'Landing Page',
-        'sitio web': 'Landing Page',
-        'página web': 'Landing Page',
-        'plataforma': 'Plataforma con IA',
-        'inteligencia artificial': 'Plataforma con IA',
-        'chatbot': 'Plataforma con IA',
-        'ia': 'Plataforma con IA',
-        'ai': 'Plataforma con IA',
-        'rebranding': 'Rebranding',
-        'renovar': 'Rebranding',
-        'optimizar': 'Rebranding',
-        'desarrollo web': 'Desarrollo Web',
-        'aplicación': 'Desarrollo Web',
-        'app': 'Desarrollo Web',
-        'consultoría': 'Consultoría'
-      }
-      
-      for (const [keyword, projectType] of Object.entries(projectKeywords)) {
-        if (content.includes(keyword) && !extractedData.projectType) {
-          extractedData.projectType = projectType
-          break
-        }
-      }
-      
-      // Extraer presupuesto
-      const budgetMatch = content.match(/(?:presupuesto|budget|inversión)\s*(?:de|es|aproximado)?\s*(\$?\d+(?:\.\d+)?(?:\s*-\s*\$?\d+(?:\.\d+)?)?(?:\s*ars|\s*pesos)?)/i)
-      if (budgetMatch && !extractedData.budget) {
-        extractedData.budget = budgetMatch[1].trim()
-      }
-      
-      // Extraer timeline
-      const timelineMatch = content.match(/(?:timeline|plazo|tiempo|urgente|normal|flexible)/i)
-      if (timelineMatch && !extractedData.timeline) {
-        if (content.includes('urgente')) {
-          extractedData.timeline = 'Urgente (1-2 semanas)'
-        } else if (content.includes('normal')) {
-          extractedData.timeline = 'Normal (1-2 meses)'
-        } else if (content.includes('flexible')) {
-          extractedData.timeline = 'Flexible (3+ meses)'
-        }
-      }
-      
-      // Extraer requerimientos (último mensaje largo del usuario)
-      if (content.length > 30 && !extractedData.requirements) {
-        extractedData.requirements = message.content
-      }
-    })
-
-    // Analizar respuestas del asistente para complementar información
-    assistantMessages.forEach(message => {
-      const content = message.content.toLowerCase()
-      
-      // Si el asistente mencionó un tipo de proyecto específico
-      if (!extractedData.projectType) {
-        const projectKeywords = {
-          'landing page': 'Landing Page',
-          'plataforma con ia': 'Plataforma con IA',
-          'rebranding': 'Rebranding',
-          'desarrollo web': 'Desarrollo Web',
-          'consultoría': 'Consultoría'
-        }
-        
-        for (const [keyword, projectType] of Object.entries(projectKeywords)) {
-          if (content.includes(keyword)) {
-            extractedData.projectType = projectType
-            break
-          }
-        }
-      }
-    })
-
-    setConversationData(extractedData)
-  }
+  const { messages, loading, showConsultationModal: isModalOpen, conversationData } = state
+  const { isLoading, error } = loading
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -249,18 +89,12 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     )
   }
 
-  const clearChat = () => {
-    // Recargar la página para reiniciar el chat
-    window.location.reload()
+  const handleClearChat = () => {
+    clearMessages()
   }
 
-  const openConsultationModal = () => {
-    extractConversationData()
-    setShowConsultationModal(true)
-  }
-
-  const closeConsultationModal = () => {
-    setShowConsultationModal(false)
+  const handleOpenConsultationModal = () => {
+    showConsultationModal()
   }
 
   // No mostrar el widget si el chat ya está abierto
@@ -306,7 +140,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
             <div className="flex items-center space-x-2">
               {/* Botón de Consulta */}
               <button
-                onClick={openConsultationModal}
+                onClick={handleOpenConsultationModal}
                 className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
                 aria-label="Agendar consulta"
                 title="Agendar consulta"
@@ -316,7 +150,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               
               {messages.length > 1 && (
                 <button
-                  onClick={clearChat}
+                  onClick={handleClearChat}
                   className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
                   aria-label="Limpiar chat"
                 >
@@ -426,8 +260,8 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
 
       {/* Modal de Consulta */}
       <ChatConsultationModal
-        isOpen={showConsultationModal}
-        onClose={closeConsultationModal}
+        isOpen={isModalOpen}
+        onClose={hideConsultationModal}
         conversationData={conversationData}
       />
     </>
