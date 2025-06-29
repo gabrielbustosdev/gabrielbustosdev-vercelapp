@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Image from "next/image"
+import Link from "next/link"
 
 export const metadata: Metadata = {
   title: "Portafolio - Gabriel Bustos",
@@ -14,7 +15,7 @@ export default function PortafolioPage() {
       description: "Plataforma de comercio electrónico con asistente virtual integrado para atención al cliente 24/7",
       tech: ["Next.js", "OpenAI", "Stripe", "PostgreSQL"],
       status: "Completado",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "/projects/ECommerce-AI.png",
     },
     {
       id: 2,
@@ -23,7 +24,7 @@ export default function PortafolioPage() {
         "Dashboard empresarial con predicciones de ventas usando machine learning y visualizaciones interactivas",
       tech: ["React", "Python", "TensorFlow", "D3.js"],
       status: "En desarrollo",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "/projects/Dashboard-ML.png",
     },
     {
       id: 3,
@@ -31,7 +32,7 @@ export default function PortafolioPage() {
       description: "Sistema de gestión empresarial con automatización de procesos mediante IA",
       tech: ["Next.js", "Node.js", "MongoDB", "OpenAI"],
       status: "Completado",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "/projects/smart-management.png",
     },
   ]
 
@@ -71,11 +72,10 @@ export default function PortafolioPage() {
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl font-semibold text-white">{project.title}</h3>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      project.status === "Completado"
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${project.status === "Completado"
                         ? "bg-green-500/20 text-green-400"
                         : "bg-yellow-500/20 text-yellow-400"
-                    }`}
+                      }`}
                   >
                     {project.status}
                   </span>
@@ -97,9 +97,11 @@ export default function PortafolioPage() {
         <div className="text-center mt-16">
           <h2 className="text-2xl font-bold text-white mb-4">¿Tienes un proyecto en mente?</h2>
           <p className="text-gray-300 mb-8">Hablemos sobre cómo puedo ayudarte a llevarlo al siguiente nivel</p>
-          <button className="bg-gradient-to-r from-blue-500 to-slate-600 text-white px-8 py-4 rounded-full hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold text-lg">
+          <Link
+            href={"/contacto"}
+            className="bg-gradient-to-r from-blue-500 to-slate-600 text-white px-8 py-4 rounded-full hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold text-lg">
             Iniciar Proyecto
-          </button>
+          </Link>
         </div>
       </div>
     </main>
