@@ -1,11 +1,16 @@
-import type { Metadata } from "next";
+"use client"
 
-export const metadata: Metadata = {
-  title: "Servicios - Gabriel Bustos",
-  description: "Desarrollo web profesional con Next.js y soluciones con inteligencia artificial. Creamos sitios efectivos que generan resultados.",
-};
+import { useState } from "react";
+import QuoteModal from "@/components/QuoteModal";
 
 export default function ServiciosPage() {
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<{
+    title: string;
+    description: string;
+    price: string;
+  } | null>(null);
+
   const services = [
     {
       title: "Landing Page que Convierten",
@@ -44,6 +49,15 @@ export default function ServiciosPage() {
       popular: false,
     },
   ];
+
+  const handleQuoteRequest = (service: typeof services[0]) => {
+    setSelectedService({
+      title: service.title,
+      description: service.description,
+      price: service.price,
+    });
+    setIsQuoteModalOpen(true);
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-slate-800 pt-16">
@@ -104,6 +118,7 @@ export default function ServiciosPage() {
 
               {/* Botón */}
               <button
+                onClick={() => handleQuoteRequest(service)}
                 className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 
           ${service.popular
                     ? "bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
@@ -137,6 +152,16 @@ export default function ServiciosPage() {
           </div>
         </div>
       </div>
+
+      {/* Quote Modal */}
+      <QuoteModal
+        isOpen={isQuoteModalOpen}
+        onClose={() => {
+          setIsQuoteModalOpen(false);
+          setSelectedService(null);
+        }}
+        selectedService={selectedService || undefined}
+      />
     </main>
   );
 }

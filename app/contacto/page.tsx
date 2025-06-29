@@ -131,7 +131,7 @@ export default function ContactoPage() {
                   name="project"
                   value={formData.project}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
                 >
                   <option value="">Selecciona una opción</option>
                   <option value="web">Desarrollo Web</option>

@@ -261,8 +261,8 @@ export default function ChatConsultationModal({
                 value={formData.projectType}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              >
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
+                >
                 <option value="">Selecciona el tipo de proyecto</option>
                 <option value="Landing Page">Landing Page que Convierte</option>
                 <option value="Plataforma con IA">Plataforma Web con Inteligencia Artificial</option>
@@ -282,7 +282,7 @@ export default function ChatConsultationModal({
                   name="budget"
                   value={formData.budget}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
                 >
                   <option value="">Selecciona un rango</option>
                   <option value="$50.000 - $100.000 ARS">$50.000 - $100.000 ARS</option>
@@ -301,7 +301,7 @@ export default function ChatConsultationModal({
                   name="timeline"
                   value={formData.timeline}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
                 >
                   <option value="">Selecciona un plazo</option>
                   <option value="Urgente (1-2 semanas)">Urgente (1-2 semanas)</option>
@@ -320,8 +320,8 @@ export default function ChatConsultationModal({
                 name="preferredContactMethod"
                 value={formData.preferredContactMethod}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-              >
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
+                >
                 <option value="email">Email</option>
                 <option value="whatsapp">WhatsApp</option>
                 <option value="llamada">Llamada telefónica</option>

@@ -1,24 +1,27 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 
-interface ConsultationModalProps {
+interface QuoteModalProps {
   isOpen: boolean
   onClose: () => void
+  selectedService?: {
+    title: string
+    description: string
+    price: string
+  }
 }
 
-export default function ConsultationModal({ isOpen, onClose }: ConsultationModalProps) {
+export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     company: "",
     phone: "",
-    projectType: "",
-    preferredDate: "",
-    preferredTime: "",
+    budget: "",
+    timeline: "",
     message: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -35,12 +38,15 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
     setSubmitStatus("idle")
 
     try {
-      const response = await fetch("/api/schedule-consultation", {
+      const response = await fetch("/api/quote", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          service: selectedService,
+        }),
       })
 
       if (response.ok) {
@@ -50,9 +56,8 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
           email: "",
           company: "",
           phone: "",
-          projectType: "",
-          preferredDate: "",
-          preferredTime: "",
+          budget: "",
+          timeline: "",
           message: "",
         })
         setTimeout(() => {
@@ -93,9 +98,9 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">
-                Agendar{" "}
+                Solicitar{" "}
                 <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent">
-                  Consulta
+                  Cotización
                 </span>
               </h2>
               <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors duration-200">
@@ -104,6 +109,15 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                 </svg>
               </button>
             </div>
+
+            {/* Service Info */}
+            {selectedService && (
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-semibold text-white mb-2">{selectedService.title}</h3>
+                <p className="text-gray-300 text-sm mb-2">{selectedService.description}</p>
+                <p className="text-blue-400 font-semibold">{selectedService.price}</p>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -173,94 +187,75 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="projectType" className="block text-sm font-medium text-gray-300 mb-2">
-                  Tipo de proyecto *
-                </label>
-                <select
-                  id="projectType"
-                  name="projectType"
-                  required
-                  value={formData.projectType}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
-                >
-                  <option value="">Selecciona una opción</option>
-                  <option value="web-development">Desarrollo Web</option>
-                  <option value="ai-integration">Integración de IA</option>
-                  <option value="consulting">Consultoría Técnica</option>
-                  <option value="automation">Automatización</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="preferredDate" className="block text-sm font-medium text-gray-300 mb-2">
-                    Fecha preferida *
+                  <label htmlFor="budget" className="block text-sm font-medium text-gray-300 mb-2">
+                    Presupuesto aproximado
                   </label>
-                  <input
-                    type="date"
-                    id="preferredDate"
-                    name="preferredDate"
-                    required
-                    value={formData.preferredDate}
+                  <select
+                    id="budget"
+                    name="budget"
+                    value={formData.budget}
                     onChange={handleInputChange}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                  />
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
+                  >
+                    <option value="">Selecciona un rango</option>
+                    <option value="50k-100k">$50.000 - $100.000 ARS</option>
+                    <option value="100k-200k">$100.000 - $200.000 ARS</option>
+                    <option value="200k-500k">$200.000 - $500.000 ARS</option>
+                    <option value="500k+">Más de $500.000 ARS</option>
+                    <option value="to-discuss">A discutir</option>
+                  </select>
                 </div>
 
                 <div>
-                  <label htmlFor="preferredTime" className="block text-sm font-medium text-gray-300 mb-2">
-                    Hora preferida *
+                  <label htmlFor="timeline" className="block text-sm font-medium text-gray-300 mb-2">
+                    Timeline del proyecto
                   </label>
                   <select
-                    id="preferredTime"
-                    name="preferredTime"
-                    required
-                    value={formData.preferredTime}
+                    id="timeline"
+                    name="timeline"
+                    value={formData.timeline}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
-                    >
-                    <option value="">Selecciona horario</option>
-                    <option value="09:00">09:00 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="14:00">02:00 PM</option>
-                    <option value="15:00">03:00 PM</option>
-                    <option value="16:00">04:00 PM</option>
-                    <option value="17:00">05:00 PM</option>
+                  >
+                    <option value="">Selecciona timeline</option>
+                    <option value="1-2-weeks">1-2 semanas</option>
+                    <option value="1-month">1 mes</option>
+                    <option value="2-3-months">2-3 meses</option>
+                    <option value="3+months">Más de 3 meses</option>
+                    <option value="flexible">Flexible</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
-                  Mensaje
+                  Detalles del proyecto *
                 </label>
                 <textarea
                   id="message"
                   name="message"
+                  required
                   rows={4}
                   value={formData.message}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
-                  placeholder="Cuéntame más sobre tu proyecto..."
+                  placeholder="Cuéntame más sobre tu proyecto, requisitos específicos, funcionalidades que necesitas..."
                 />
               </div>
 
               {/* Status Messages */}
               {submitStatus === "success" && (
                 <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
-                  <p className="text-green-400 text-center">¡Consulta agendada exitosamente! Te contactaré pronto.</p>
+                  <p className="text-green-400 text-center">¡Cotización solicitada exitosamente! Te contactaré dentro de las próximas 24 horas.</p>
                 </div>
               )}
 
               {submitStatus === "error" && (
                 <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
                   <p className="text-red-400 text-center">
-                    Hubo un error al enviar la consulta. Por favor, intenta nuevamente.
+                    Hubo un error al enviar la solicitud. Por favor, intenta nuevamente.
                   </p>
                 </div>
               )}
@@ -271,7 +266,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                 disabled={isSubmitting}
                 className="w-full bg-gradient-to-r from-blue-500 to-slate-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-slate-700 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Enviando..." : "Agendar Consulta"}
+                {isSubmitting ? "Enviando..." : "Solicitar Cotización"}
               </button>
             </form>
           </motion.div>
@@ -279,4 +274,4 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
       )}
     </AnimatePresence>
   )
-}
+} 
