@@ -14,15 +14,24 @@ import {
 // Configuración de palabras clave para detección de intenciones
 const INTENT_KEYWORDS: Record<IntentType, string[]> = {
   greeting: ['hola', 'buenos días', 'buenas tardes', 'buenas noches', 'saludos', 'hey'],
+  project_inquiry: ['proyecto', 'desarrollar', 'crear', 'construir', 'implementar', 'hacer'],
+  budget_discussion: ['presupuesto', 'costo', 'precio', 'inversión', 'gasto', 'dinero'],
+  timeline_discussion: ['tiempo', 'fecha', 'plazo', 'duración', 'cuándo', 'cronograma'],
   service_inquiry: ['servicios', 'qué haces', 'qué ofreces', 'servicios que', 'trabajos que'],
-  project_quote: ['cotización', 'presupuesto', 'precio', 'costo', 'cuánto cuesta', 'tarifa'],
-  consultation_request: ['consulta', 'agendar', 'cita', 'reunión', 'hablar', 'contactar'],
-  technical_question: ['técnico', 'tecnología', 'stack', 'framework', 'lenguaje', 'herramienta'],
-  pricing_inquiry: ['precios', 'costos', 'tarifas', 'valores', 'inversión'],
+  contact_request: ['contacto', 'contactar', 'hablar', 'comunicar', 'llamar', 'escribir'],
   portfolio_request: ['portafolio', 'trabajos', 'proyectos', 'ejemplos', 'muestras'],
+  consultation_request: ['consulta', 'agendar', 'cita', 'reunión', 'hablar', 'contactar'],
+  pricing_inquiry: ['precios', 'costos', 'tarifas', 'valores', 'inversión'],
+  technical_question: ['técnico', 'tecnología', 'stack', 'framework', 'lenguaje', 'herramienta'],
+  general_question: ['pregunta', 'duda', 'información', 'ayuda', 'cómo'],
+  goodbye: ['adiós', 'hasta luego', 'chao', 'nos vemos', 'gracias', 'bye'],
+  clarification_request: ['aclarar', 'explicar', 'entender', 'comprender', 'detallar'],
+  confirmation: ['confirmar', 'sí', 'correcto', 'exacto', 'perfecto', 'ok'],
+  objection: ['no', 'pero', 'sin embargo', 'aunque', 'problema', 'dificultad'],
+  urgency_indicator: ['urgente', 'rápido', 'inmediato', 'pronto', 'ya', 'ahora'],
+  project_quote: ['cotización', 'presupuesto', 'precio', 'costo', 'cuánto cuesta', 'tarifa'],
   general_information: ['información', 'sobre', 'acerca de', 'más info', 'detalles'],
-  complaint: ['problema', 'error', 'queja', 'mal', 'no funciona', 'defecto'],
-  goodbye: ['adiós', 'hasta luego', 'chao', 'nos vemos', 'gracias', 'bye']
+  complaint: ['problema', 'error', 'queja', 'mal', 'no funciona', 'defecto']
 }
 
 // Configuración de flujos por tipo de servicio
@@ -474,10 +483,14 @@ export class ConversationEngine {
     return {
       name: requiredFields.includes('name') && !data.name,
       email: requiredFields.includes('email') && !data.email,
+      phone: requiredFields.includes('phone') && !data.phone,
       projectType: requiredFields.includes('projectType') && !data.projectType,
       requirements: requiredFields.includes('requirements') && !data.requirements,
       budget: requiredFields.includes('budget') && !data.budget,
-      timeline: requiredFields.includes('timeline') && !data.timeline
+      timeline: requiredFields.includes('timeline') && !data.timeline,
+      companyName: requiredFields.includes('companyName') && !data.companyName,
+      location: requiredFields.includes('location') && !data.location,
+      project_description: false // Campo no usado en ConversationData
     }
   }
   
@@ -497,10 +510,16 @@ export class ConversationEngine {
     const fieldLabels: Record<keyof ConversationData, { label: string; description: string }> = {
       name: { label: 'Nombre', description: 'Tu nombre completo' },
       email: { label: 'Email', description: 'Tu dirección de email' },
+      phone: { label: 'Teléfono', description: 'Tu número de teléfono' },
       projectType: { label: 'Tipo de proyecto', description: 'El tipo de proyecto que necesitas' },
       requirements: { label: 'Requerimientos', description: 'Descripción detallada de lo que necesitas' },
       budget: { label: 'Presupuesto', description: 'Tu presupuesto aproximado' },
-      timeline: { label: 'Timeline', description: 'Cuándo necesitas el proyecto' }
+      timeline: { label: 'Timeline', description: 'Cuándo necesitas el proyecto' },
+      companyName: { label: 'Empresa', description: 'Nombre de tu empresa' },
+      location: { label: 'Ubicación', description: 'Tu ubicación' },
+      clientName: { label: 'Nombre del cliente', description: 'Nombre del cliente' },
+      clientEmail: { label: 'Email del cliente', description: 'Email del cliente' },
+      clientPhone: { label: 'Teléfono del cliente', description: 'Teléfono del cliente' }
     }
     
     return requiredFields.map(field => ({
@@ -515,15 +534,24 @@ export class ConversationEngine {
   static getGenericResponse(intentType: IntentType): string {
     const responses: Record<IntentType, string> = {
       greeting: '¡Hola! Soy el asistente de Gabriel Bustos. ¿En qué puedo ayudarte hoy?',
+      project_inquiry: '¡Perfecto! Para ayudarte con tu proyecto necesito algunos detalles. ¿Qué tienes en mente?',
+      budget_discussion: 'Entiendo tu interés en el presupuesto. ¿Podrías contarme más sobre tu proyecto?',
+      timeline_discussion: 'El timeline es importante. ¿Cuándo necesitas que esté listo el proyecto?',
       service_inquiry: 'Ofrezco servicios de desarrollo web, integración de IA, consultoría técnica y más. ¿Qué te interesa?',
-      project_quote: '¡Perfecto! Para darte una cotización necesito algunos detalles. ¿Qué tipo de proyecto tienes en mente?',
-      consultation_request: '¡Excelente! Puedo ayudarte a agendar una consulta. ¿Qué día te viene mejor?',
-      technical_question: '¡Me encanta hablar de tecnología! ¿Qué te gustaría saber específicamente?',
-      pricing_inquiry: 'Los precios varían según el proyecto. ¿Podrías contarme qué necesitas para darte una idea?',
+      contact_request: '¡Claro! Puedes contactarme por email o agendar una consulta. ¿Qué prefieres?',
       portfolio_request: '¡Claro! Puedes ver mi portafolio en la sección de proyectos. ¿Hay algo específico que te interese?',
+      consultation_request: '¡Excelente! Puedo ayudarte a agendar una consulta. ¿Qué día te viene mejor?',
+      pricing_inquiry: 'Los precios varían según el proyecto. ¿Podrías contarme qué necesitas para darte una idea?',
+      technical_question: '¡Me encanta hablar de tecnología! ¿Qué te gustaría saber específicamente?',
+      general_question: '¡Con gusto te ayudo! ¿Qué pregunta tienes?',
+      goodbye: '¡Ha sido un placer! Si necesitas algo más, no dudes en contactarme. ¡Que tengas un excelente día!',
+      clarification_request: 'Por supuesto, ¿qué necesitas que te aclare?',
+      confirmation: '¡Perfecto! ¿Hay algo más en lo que pueda ayudarte?',
+      objection: 'Entiendo tu preocupación. ¿Podrías contarme más para poder ayudarte mejor?',
+      urgency_indicator: 'Entiendo que es urgente. Te ayudo lo más rápido posible. ¿Qué necesitas?',
+      project_quote: '¡Perfecto! Para darte una cotización necesito algunos detalles. ¿Qué tipo de proyecto tienes en mente?',
       general_information: '¡Con gusto te ayudo! ¿Qué información necesitas sobre mis servicios?',
-      complaint: 'Lamento escuchar eso. ¿Podrías contarme más detalles para poder ayudarte?',
-      goodbye: '¡Ha sido un placer! Si necesitas algo más, no dudes en contactarme. ¡Que tengas un excelente día!'
+      complaint: 'Lamento escuchar eso. ¿Podrías contarme más detalles para poder ayudarte?'
     }
     
     return responses[intentType] || '¡Gracias por contactarme! ¿En qué puedo ayudarte?'

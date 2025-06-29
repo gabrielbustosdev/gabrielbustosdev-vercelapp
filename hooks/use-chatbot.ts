@@ -209,7 +209,22 @@ export const useChatbotLogic = () => {
       if (!validatedResult.completeness.isComplete) {
         const missingInfo: Partial<MissingInfoTracker> = {}
         validatedResult.completeness.missingFields.forEach(field => {
-          missingInfo[field] = true
+          // Mapear campos del NLP a MissingInfoTracker
+          const fieldMapping: Record<string, keyof MissingInfoTracker> = {
+            name: 'name',
+            email: 'email',
+            phone: 'phone',
+            project_description: 'requirements',
+            budget: 'budget',
+            timeline: 'timeline',
+            company: 'companyName',
+            location: 'location'
+          }
+          
+          const mappedField = fieldMapping[field]
+          if (mappedField) {
+            missingInfo[mappedField] = true
+          }
         })
         
         if (Object.keys(missingInfo).length > 0) {
@@ -224,9 +239,11 @@ export const useChatbotLogic = () => {
       const intent: ConversationIntent = {
         type: validatedResult.intent.type,
         confidence: validatedResult.intent.confidence,
+        keywords: [], // Se puede extraer de validatedResult.intent si está disponible
+        context: {}, // Contexto vacío por defecto
         entities: validatedResult.entities,
         sentiment: validatedResult.sentiment,
-        timestamp: new Date().toISOString()
+        timestamp: new Date()
       }
       
       dispatch({ type: 'SET_CURRENT_INTENT', payload: intent })
