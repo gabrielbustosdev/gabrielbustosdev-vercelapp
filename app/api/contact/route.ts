@@ -1,15 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sendEmail, createContactEmailTemplate } from "@/lib/email"
+import { ContactFormSchema, validateData } from "@/schemas/validations"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, company, project, message } = body
-
-    // Validación básica
-    if (!name || !email || !message) {
-      return NextResponse.json({ error: "Campos requeridos faltantes" }, { status: 400 })
+    
+    // Validar datos con Zod
+    const validation = validateData(ContactFormSchema, body)
+    
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: "Datos inválidos", 
+        details: validation.errors 
+      }, { status: 400 })
     }
+
+    const { name, email, company, project, message } = validation.data
 
     // Email para ti (admin)
     await sendEmail({
@@ -53,7 +60,10 @@ export async function POST(request: NextRequest) {
       `,
     })
 
-    return NextResponse.json({ message: "Mensaje enviado exitosamente" }, { status: 200 })
+    return NextResponse.json({ 
+      message: "Mensaje enviado exitosamente",
+      data: { name, email, company, project }
+    }, { status: 200 })
   } catch (error) {
     console.error("Error al enviar mensaje:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
