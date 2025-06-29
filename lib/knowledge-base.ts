@@ -88,31 +88,99 @@ export interface KnowledgeEntry {
       category: "procesos",
       keywords: ["metodología", "ágil", "reunión inicial", "propuesta", "desarrollo", "entregas", "lanzamiento"],
       priority: 5
+    },
+    {
+      id: "usecase-lead-generation",
+      title: "Caso de Uso: Generación de Leads con Landing Page",
+      content: "Implementé una landing page para una startup de marketing digital que aumentó la captación de leads en un 40% gracias a formularios optimizados, integración con WhatsApp y automatización de emails. El diseño responsive y la velocidad de carga fueron claves para la conversión.",
+      category: "casos de uso",
+      keywords: ["landing page", "leads", "formulario", "whatsapp", "automatización", "conversión", "startup", "marketing"],
+      priority: 9
+    },
+    {
+      id: "usecase-ai-automation",
+      title: "Caso de Uso: Automatización con IA para E-commerce",
+      content: "Desarrollé un sistema de chatbot y automatización de respuestas para una tienda online, usando OpenAI y WhatsApp API. El bot resolvía dudas frecuentes, recomendaba productos y gestionaba pedidos, reduciendo el tiempo de atención manual en un 60%.",
+      category: "casos de uso",
+      keywords: ["chatbot", "e-commerce", "automatización", "openai", "whatsapp", "tienda online", "soporte", "recomendaciones"],
+      priority: 9
+    },
+    {
+      id: "project-dashboard-ml",
+      title: "Ejemplo: Dashboard de Machine Learning para PyME",
+      content: "Proyecto de dashboard interactivo para una PyME industrial, integrando visualización de datos y predicción de demanda con modelos de machine learning. Incluyó autenticación, panel de métricas y reportes automáticos.",
+      category: "proyectos",
+      keywords: ["dashboard", "machine learning", "pyme", "visualización", "predicción", "autenticación", "reportes"],
+      priority: 8
+    },
+    {
+      id: "project-ecommerce-ai",
+      title: "Ejemplo: E-commerce con Recomendaciones Inteligentes",
+      content: "Desarrollo de tienda online con motor de recomendaciones personalizadas usando IA. Mejoró la tasa de conversión y el ticket promedio. Incluyó integración con pasarelas de pago y panel de administración.",
+      category: "proyectos",
+      keywords: ["e-commerce", "recomendaciones", "inteligencia artificial", "tienda online", "pagos", "panel administración"],
+      priority: 8
+    },
+    {
+      id: "project-smart-management",
+      title: "Ejemplo: Sistema de Gestión Inteligente",
+      content: "Sistema web para gestión de tareas y recursos en empresas, con módulos de IA para análisis de productividad y alertas automáticas. Usado por equipos remotos y adaptado a distintos rubros.",
+      category: "proyectos",
+      keywords: ["gestión", "inteligente", "tareas", "recursos", "productividad", "alertas", "empresas", "ia"],
+      priority: 8
     }
   ]
   
   // Función para buscar en la base de conocimiento
-  export function searchKnowledge(query: string, limit: number = 3): KnowledgeEntry[] {
+  export function searchKnowledge(
+    query: string,
+    limit: number = 3,
+    options?: {
+      category?: string
+      intentType?: string
+      serviceType?: string
+      requiredKeywords?: string[]
+    }
+  ): KnowledgeEntry[] {
     const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2)
-    
+    const { category, intentType, serviceType, requiredKeywords } = options || {}
+
     const results = gabrielBustosKnowledge
       .map(entry => {
         let score = 0
-        
+
+        // Filtro por categoría si se especifica
+        if (category && entry.category !== category) {
+          score -= 5
+        }
+        // Filtro por tipo de servicio si se especifica
+        if (serviceType && !entry.keywords.some(k => k.toLowerCase().includes(serviceType.toLowerCase()))) {
+          score -= 3
+        }
+        // Filtro por intención si se especifica (ejemplo: casos de uso para "project_quote")
+        if (intentType && intentType === 'project_quote' && entry.category === 'casos de uso') {
+          score += 3
+        }
+        // Reforzar si contiene keywords requeridas
+        if (requiredKeywords && requiredKeywords.length > 0) {
+          requiredKeywords.forEach(req => {
+            if (entry.keywords.some(k => k.toLowerCase().includes(req.toLowerCase()))) {
+              score += 4
+            }
+          })
+        }
         // Buscar en título (peso mayor)
         searchTerms.forEach(term => {
           if (entry.title.toLowerCase().includes(term)) {
             score += 3
           }
         })
-        
         // Buscar en contenido
         searchTerms.forEach(term => {
           if (entry.content.toLowerCase().includes(term)) {
             score += 2
           }
         })
-        
         // Buscar en keywords (peso mayor)
         searchTerms.forEach(term => {
           entry.keywords.forEach(keyword => {
@@ -121,28 +189,42 @@ export interface KnowledgeEntry {
             }
           })
         })
-        
         // Aplicar prioridad base
         score += entry.priority
-        
         return { ...entry, score }
       })
       .filter(entry => entry.score > entry.priority) // Solo entries con coincidencias
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-    
+
     return results
   }
   
-  // Función para obtener contexto relevante
-  export function getRelevantContext(query: string): string {
-    const relevantEntries = searchKnowledge(query, 3)
-    
+  // Función para obtener contexto relevante dinámico
+  export function getRelevantContext(
+    query: string,
+    options?: {
+      category?: string
+      intentType?: string
+      serviceType?: string
+      requiredKeywords?: string[]
+      conversationStage?: string
+    }
+  ): string {
+    const relevantEntries = searchKnowledge(query, 4, options)
+
     if (relevantEntries.length === 0) {
       return ""
     }
-    
-    return relevantEntries
+
+    // Si la etapa de la conversación es "collecting_requirements" o "project_quote", priorizar ejemplos y casos de uso
+    let contextEntries = relevantEntries
+    if (options?.conversationStage === 'collecting_requirements' || options?.intentType === 'project_quote') {
+      const extra = gabrielBustosKnowledge.filter(e => e.category === 'casos de uso' || e.category === 'proyectos')
+      contextEntries = [...relevantEntries, ...extra].slice(0, 6)
+    }
+
+    return contextEntries
       .map(entry => `**${entry.title}**\n${entry.content}`)
       .join('\n\n')
   }
