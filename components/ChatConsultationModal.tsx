@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { X, Send, CheckCircle } from "lucide-react"
 
 interface ChatConsultationModalProps {
@@ -53,33 +53,15 @@ export default function ChatConsultationModal({
     }
   }, [conversationData])
 
-  const generateConversationSummary = () => {
+  const generateConversationSummary = useCallback(() => {
     const summary = []
-    
-    if (conversationData.name) {
-      summary.push(`Cliente: ${conversationData.name}`)
-    }
-    
-    if (conversationData.projectType) {
-      summary.push(`Tipo de proyecto: ${conversationData.projectType}`)
-    }
-    
-    if (conversationData.budget) {
-      summary.push(`Presupuesto mencionado: ${conversationData.budget}`)
-    }
-    
-    if (conversationData.timeline) {
-      summary.push(`Timeline: ${conversationData.timeline}`)
-    }
-    
-    if (conversationData.requirements) {
-      summary.push(`Requerimientos: ${conversationData.requirements}`)
-    }
-    
-    if (summary.length > 0) {
-      setConversationSummary(summary.join('. ') + '.')
-    }
-  }
+    if (conversationData.name) summary.push(`Cliente: ${conversationData.name}`)
+    if (conversationData.projectType) summary.push(`Tipo de proyecto: ${conversationData.projectType}`)
+    if (conversationData.budget) summary.push(`Presupuesto mencionado: ${conversationData.budget}`)
+    if (conversationData.timeline) summary.push(`Timeline: ${conversationData.timeline}`)
+    if (conversationData.requirements) summary.push(`Requerimientos: ${conversationData.requirements}`)
+    if (summary.length > 0) setConversationSummary(summary.join('. ') + '.')
+  }, [conversationData, setConversationSummary])
 
   // Generar resumen de la conversación cuando se abre el modal
   useEffect(() => {

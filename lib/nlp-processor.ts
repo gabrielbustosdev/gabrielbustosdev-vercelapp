@@ -125,11 +125,21 @@ const INTENT_KEYWORDS = {
 
 // Palabras clave para análisis de sentimiento
 const SENTIMENT_KEYWORDS = {
-  positive: ['excelente', 'fantástico', 'genial', 'perfecto', 'maravilloso', 'increíble', 'increible', 'bueno', 'bien'],
-  negative: ['malo', 'terrible', 'horrible', 'pésimo', 'pesimo', 'mal', 'problema', 'error', 'fallo'],
-  urgent: ['urgente', 'inmediato', 'rápido', 'rapido', 'pronto', 'ya', 'ahora', 'emergencia'],
-  confused: ['confundido', 'no entiendo', 'no se', 'no sé', 'dudoso', 'incierto'],
-  excited: ['emocionado', 'entusiasmado', 'ansioso', 'esperando', 'deseando'],
+  positive: [
+    'excelente', 'fantástico', 'genial', 'perfecto', 'maravilloso', 'increíble', 'increible', 'bueno', 'bien',
+  ] as readonly string[],
+  negative: [
+    'malo', 'terrible', 'horrible', 'pésimo', 'pesimo', 'mal', 'problema', 'error', 'fallo',
+  ] as readonly string[],
+  urgent: [
+    'urgente', 'inmediato', 'rápido', 'rapido', 'pronto', 'ya', 'ahora', 'emergencia',
+  ] as readonly string[],
+  confused: [
+    'confundido', 'no entiendo', 'no se', 'no sé', 'dudoso', 'incierto',
+  ] as readonly string[],
+  excited: [
+    'emocionado', 'entusiasmado', 'ansioso', 'esperando', 'deseando',
+  ] as readonly string[],
 } as const;
 
 // ============================================================================
@@ -154,8 +164,11 @@ export class NLPProcessor {
   async processText(text: string): Promise<NLPResult> {
     const normalizedText = this.normalizeText(text);
     
-    const [entities, intent, sentiment, completeness] = await Promise.all([
-      this.extractEntities(normalizedText),
+    // Primero extraer entidades
+    const entities = await this.extractEntities(normalizedText);
+    
+    // Luego procesar el resto en paralelo
+    const [intent, sentiment, completeness] = await Promise.all([
       this.classifyIntent(normalizedText),
       this.analyzeSentiment(normalizedText),
       this.assessInformationCompleteness(normalizedText, entities),
@@ -280,7 +293,6 @@ export class NLPProcessor {
    */
   private extractNames(text: string): Entity[] {
     const entities: Entity[] = [];
-    const words = text.split(' ');
     
     // Buscar patrones como "me llamo X", "soy X", "mi nombre es X"
     const namePatterns = [
@@ -395,10 +407,10 @@ export class NLPProcessor {
 
     // Contar palabras por categoría
     for (const word of words) {
-      if (SENTIMENT_KEYWORDS.positive.includes(word as any)) positiveScore += 1;
-      if (SENTIMENT_KEYWORDS.negative.includes(word as any)) negativeScore += 1;
-      if (SENTIMENT_KEYWORDS.confused.includes(word as any)) confusedScore += 1;
-      if (SENTIMENT_KEYWORDS.excited.includes(word as any)) excitedScore += 1;
+      if (Array.from(SENTIMENT_KEYWORDS.positive).includes(word)) positiveScore += 1;
+      if (Array.from(SENTIMENT_KEYWORDS.negative).includes(word)) negativeScore += 1;
+      if (Array.from(SENTIMENT_KEYWORDS.confused).includes(word)) confusedScore += 1;
+      if (Array.from(SENTIMENT_KEYWORDS.excited).includes(word)) excitedScore += 1;
     }
 
     // Calcular score general (-1 a 1)
@@ -436,7 +448,7 @@ export class NLPProcessor {
   ): Promise<InformationCompleteness> {
     const requiredFields = [
       'name', 'email', 'project_description', 'budget', 'timeline'
-    ];
+    ] as const;
     
     const missingFields: InformationCompleteness['missingFields'] = [];
     let foundFields = 0;
@@ -447,7 +459,7 @@ export class NLPProcessor {
                       this.hasFieldInText(text, field);
       
       if (!hasField) {
-        missingFields.push(field as any);
+        missingFields.push(field);
       } else {
         foundFields++;
       }

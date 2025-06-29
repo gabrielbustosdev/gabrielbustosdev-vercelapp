@@ -8,9 +8,34 @@ interface GuardrailsDisplayProps {
   onClose?: () => void
 }
 
+interface GuardrailStats {
+  totalInteractions: number
+  actions: Record<string, number>
+  averageResponseLength: number
+  ragUsage: number
+  ragUsagePercentage: number
+  conversationMetrics: Array<{
+    messageCount: number
+    conversationDuration: number
+    offTopicCount: number
+    qualityScore: number
+    lastOnTopicTime: number
+    recoveryAttempts: number
+  }>
+}
+
+interface GuardrailReport {
+  totalInteractions: number
+  blockedResponses: number
+  modifiedResponses: number
+  redirectedConversations: number
+  averageQualityScore: number
+  topIssues: Array<{ category: string; count: number }>
+}
+
 export default function GuardrailsDisplay({ isVisible = false, onClose }: GuardrailsDisplayProps) {
-  const [stats, setStats] = useState<any>(null)
-  const [report, setReport] = useState<any>(null)
+  const [stats, setStats] = useState<GuardrailStats | null>(null)
+  const [report, setReport] = useState<GuardrailReport | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
@@ -77,7 +102,7 @@ export default function GuardrailsDisplay({ isVisible = false, onClose }: Guardr
           <div className="mb-4">
             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Acciones</h4>
             <div className="space-y-1">
-              {stats?.actions && Object.entries(stats.actions).map(([action, count]: [string, any]) => (
+              {stats?.actions && Object.entries(stats.actions).map(([action, count]) => (
                 <div key={action} className="flex justify-between text-sm">
                   <span className="capitalize text-gray-600 dark:text-gray-400">{action}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{count}</span>
@@ -96,7 +121,7 @@ export default function GuardrailsDisplay({ isVisible = false, onClose }: Guardr
                     Problemas Principales
                   </h4>
                   <div className="space-y-1">
-                    {report.topIssues.map((issue: any, index: number) => (
+                    {report.topIssues.map((issue, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-600 dark:text-gray-400 capitalize">
                           {issue.category.replace(/([A-Z])/g, ' $1').trim()}
@@ -120,19 +145,19 @@ export default function GuardrailsDisplay({ isVisible = false, onClose }: Guardr
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Mensajes Totales</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {stats.conversationMetrics.reduce((sum: number, m: any) => sum + m.messageCount, 0)}
+                        {stats.conversationMetrics.reduce((sum, m) => sum + m.messageCount, 0)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Fuera de Tema</span>
                       <span className="font-medium text-orange-600 dark:text-orange-400">
-                        {stats.conversationMetrics.reduce((sum: number, m: any) => sum + m.offTopicCount, 0)}
+                        {stats.conversationMetrics.reduce((sum, m) => sum + m.offTopicCount, 0)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Recuperaciones</span>
                       <span className="font-medium text-yellow-600 dark:text-yellow-400">
-                        {stats.conversationMetrics.reduce((sum: number, m: any) => sum + m.recoveryAttempts, 0)}
+                        {stats.conversationMetrics.reduce((sum, m) => sum + m.recoveryAttempts, 0)}
                       </span>
                     </div>
                   </div>

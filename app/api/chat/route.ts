@@ -114,7 +114,14 @@ export async function POST(req: NextRequest) {
         enableFactChecking: true,
         enableToneValidation: true,
         enableScopeValidation: true,
-        maxResponseLength: 800 // Respuestas más concisas
+        enableQualityFiltering: true,
+        enableTimeLimits: true,
+        enableConversationRecovery: true,
+        maxResponseLength: 800,
+        maxConversationLength: 50,
+        maxConversationTime: 30,
+        qualityThreshold: 0.7,
+        recoveryAttempts: 3
       }
     })
 

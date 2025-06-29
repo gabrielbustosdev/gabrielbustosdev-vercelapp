@@ -1,5 +1,5 @@
 // lib/guardrails.ts
-import { type ChatMessage, type ConversationState } from '../hooks/types'
+import { type ChatMessage } from '../hooks/types'
 
 export interface GuardrailResult {
   isValid: boolean
