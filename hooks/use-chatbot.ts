@@ -6,9 +6,14 @@ import {
   ChatbotContextType, 
   ChatMessage, 
   ConversationData,
-  MessageAnalysis 
+  MessageAnalysis,
+  ConversationIntent,
+  ConversationFlow,
+  MissingInfoTracker,
+  FollowUpQuestion
 } from './types'
 import { chatbotReducer, initialState } from './chatbot-reducer'
+import { ConversationEngine } from './conversation-engine'
 
 // Crear el contexto del chatbot
 const ChatbotContext = createContext<ChatbotContextType | undefined>(undefined)
@@ -92,6 +97,89 @@ export const useChatbotLogic = () => {
       }
     }
   })
+
+  // ===== NUEVAS FUNCIONES DEL SISTEMA DE INTENCIONES =====
+
+  // Detectar intención del mensaje del usuario
+  const detectIntent = useCallback((message: string): ConversationIntent => {
+    return ConversationEngine.detectIntent(message)
+  }, [])
+
+  // Obtener flujo conversacional basado en la intención
+  const getConversationFlow = useCallback((intent: ConversationIntent): ConversationFlow | null => {
+    return ConversationEngine.getConversationFlow(intent, state.conversationData)
+  }, [state.conversationData])
+
+  // Generar preguntas de seguimiento
+  const generateFollowUpQuestions = useCallback((missingInfo: MissingInfoTracker): FollowUpQuestion[] => {
+    return ConversationEngine.generateFollowUpQuestions(missingInfo, state.currentIntent?.type || 'general_information')
+  }, [state.currentIntent])
+
+  // Procesar respuesta del usuario
+  const processUserResponse = useCallback((message: string, currentFlow: ConversationFlow) => {
+    const extractedData = ConversationEngine.processUserResponse(message, currentFlow)
+    
+    if (Object.keys(extractedData).length > 0) {
+      dispatch({ 
+        type: 'UPDATE_CONVERSATION_DATA', 
+        payload: extractedData 
+      })
+      
+      // Actualizar información faltante
+      const updatedMissingInfo: Partial<MissingInfoTracker> = {}
+      Object.entries(extractedData).forEach(([key, value]) => {
+        if (value) {
+          updatedMissingInfo[key as keyof MissingInfoTracker] = false
+        }
+      })
+      
+      if (Object.keys(updatedMissingInfo).length > 0) {
+        dispatch({ 
+          type: 'UPDATE_MISSING_INFO', 
+          payload: updatedMissingInfo 
+        })
+      }
+    }
+  }, [])
+
+  // Función para manejar el envío de mensajes con detección de intenciones
+  const handleSubmitWithIntent = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    
+    if (!input.trim()) return
+    
+    // Detectar intención del mensaje del usuario
+    const intent = detectIntent(input)
+    dispatch({ type: 'SET_CURRENT_INTENT', payload: intent })
+    
+    // Obtener flujo conversacional
+    const flow = getConversationFlow(intent)
+    if (flow) {
+      dispatch({ type: 'SET_CONVERSATION_FLOW', payload: flow })
+      
+      // Procesar respuesta del usuario si hay un flujo activo
+      if (state.conversationFlow) {
+        processUserResponse(input, state.conversationFlow)
+      }
+    }
+    
+    // Generar preguntas de seguimiento si es necesario
+    if (state.missingInfo) {
+      const followUpQuestions = generateFollowUpQuestions(state.missingInfo)
+      if (followUpQuestions.length > 0) {
+        // Limpiar preguntas anteriores
+        dispatch({ type: 'CLEAR_FOLLOW_UP_QUESTIONS' })
+        
+        // Agregar nuevas preguntas
+        followUpQuestions.forEach(question => {
+          dispatch({ type: 'ADD_FOLLOW_UP_QUESTION', payload: question })
+        })
+      }
+    }
+    
+    // Continuar con el flujo normal del AI SDK
+    handleSubmit(e)
+  }, [input, detectIntent, getConversationFlow, processUserResponse, state.conversationFlow, state.missingInfo, generateFollowUpQuestions, handleSubmit])
 
   // Función para analizar mensajes y detectar oportunidades de consulta
   const analyzeMessageForConsultation = (
@@ -204,7 +292,7 @@ export const useChatbotLogic = () => {
     return extractedData
   }
 
-  // Funciones de acción del chatbot
+  // Funciones del contexto
   const openChat = useCallback(() => {
     dispatch({ type: 'OPEN_CHAT' })
   }, [])
@@ -237,33 +325,8 @@ export const useChatbotLogic = () => {
     dispatch({ type: 'CLEAR_MESSAGES' })
   }, [])
 
-  // Sincronizar estado de carga con AI SDK
-  if (isLoading !== state.loading.isLoading) {
-    dispatch({ type: 'SET_LOADING', payload: isLoading })
-  }
-
-  if (error && error.message !== state.loading.error) {
-    dispatch({ type: 'SET_ERROR', payload: error.message })
-  }
-
-  // Sincronizar mensajes del AI SDK con el estado local
-  const syncMessages = useCallback(() => {
-    const formattedMessages: ChatMessage[] = aiMessages.map(msg => ({
-      id: msg.id,
-      role: msg.role as 'user' | 'assistant' | 'system',
-      content: msg.content,
-      timestamp: new Date()
-    }))
-    
-    dispatch({ type: 'SET_MESSAGES', payload: formattedMessages })
-  }, [aiMessages])
-
-  // Ejecutar sincronización cuando cambien los mensajes
-  useEffect(() => {
-    syncMessages()
-  }, [aiMessages, syncMessages])
-
-  return {
+  // Crear el valor del contexto
+  const contextValue: ChatbotContextType = {
     state,
     dispatch,
     openChat,
@@ -277,12 +340,28 @@ export const useChatbotLogic = () => {
     // Funciones del AI SDK
     input,
     handleInputChange,
-    handleSubmit,
+    handleSubmit: handleSubmitWithIntent, // Usar la versión con detección de intenciones
     reload,
     // Funciones de análisis
     analyzeMessageForConsultation,
-    extractConversationData
+    extractConversationData,
+    // Nuevas funciones del sistema de intenciones
+    detectIntent,
+    getConversationFlow,
+    generateFollowUpQuestions,
+    processUserResponse
   }
+
+  return contextValue
+}
+
+// Hook para usar el contexto del chatbot
+export const useChatbotContext = () => {
+  const context = useContext(ChatbotContext)
+  if (context === undefined) {
+    throw new Error('useChatbotContext debe ser usado dentro de un ChatbotProvider')
+  }
+  return context
 }
 
 // Exportar el contexto para el provider

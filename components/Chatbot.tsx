@@ -5,14 +5,29 @@ import { useRef, useEffect } from "react"
 import { Bot, User, Send, Loader2, AlertCircle, Calendar } from "lucide-react"
 import ChatConsultationModal from "./ChatConsultationModal"
 import { useChatbot } from "../hooks/use-chatbot"
+import { ConversationIntent, ConversationFlow, MissingInfoTracker, FollowUpQuestion } from "../hooks/types"
 
 interface ChatBotProps {
   isOpen: boolean
   onClose: () => void
   onOpen: () => void
+  currentIntent?: ConversationIntent | null
+  conversationFlow?: ConversationFlow | null
+  missingInfo?: MissingInfoTracker
+  followUpQuestions?: FollowUpQuestion[]
+  onFollowUpQuestionClick?: (question: FollowUpQuestion) => void
 }
 
-export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
+export default function ChatBot({ 
+  isOpen, 
+  onClose, 
+  onOpen,
+  currentIntent,
+  conversationFlow,
+  missingInfo,
+  followUpQuestions = [],
+  onFollowUpQuestionClick
+}: ChatBotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   
@@ -89,6 +104,51 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     )
   }
 
+  const renderFollowUpQuestions = () => {
+    if (!followUpQuestions || followUpQuestions.length === 0) return null
+
+    return (
+      <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+        <h4 className="text-sm font-medium text-blue-300 mb-2">Preguntas sugeridas:</h4>
+        <div className="space-y-2">
+          {followUpQuestions.map((question) => (
+            <button
+              key={question.id}
+              onClick={() => onFollowUpQuestionClick?.(question)}
+              className="block w-full text-left p-2 text-sm text-gray-200 hover:bg-blue-500/20 rounded transition-colors duration-200"
+            >
+              {question.question}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const renderConversationFlow = () => {
+    if (!conversationFlow || !missingInfo) return null
+
+    const missingFields = Object.entries(missingInfo)
+      .filter(([, isMissing]) => isMissing)
+      .map(([field]) => field)
+
+    if (missingFields.length === 0) return null
+
+    return (
+      <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+        <h4 className="text-sm font-medium text-yellow-300 mb-2">Información faltante:</h4>
+        <div className="text-xs text-yellow-200">
+          {missingFields.map((field) => (
+            <div key={field} className="flex items-center space-x-2">
+              <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+              <span className="capitalize">{field}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   const handleClearChat = () => {
     clearMessages()
   }
@@ -97,7 +157,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     showConsultationModal()
   }
 
-  // No mostrar el widget si el chat ya está abierto
   if (!isOpen) {
     return (
       <div className="fixed bottom-6 right-6 z-50">
@@ -123,7 +182,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
       <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
         <div className="absolute inset-4 md:inset-8 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-2xl flex flex-col overflow-hidden">
           
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-slate-600/10">
             <div className="flex items-center space-x-3">
               <div className="relative">
@@ -135,10 +193,14 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               <div>
                 <h3 className="text-white font-semibold">Asistente IA de Gabriel</h3>
                 <p className="text-gray-400 text-sm">En línea</p>
+                {currentIntent && (
+                  <p className="text-xs text-blue-300">
+                    Intención: {currentIntent.type} ({Math.round(currentIntent.confidence * 100)}%)
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Botón de Consulta */}
               <button
                 onClick={handleOpenConsultationModal}
                 className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
@@ -172,7 +234,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
               <div key={message.id}>
@@ -180,7 +241,10 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               </div>
             ))}
 
-            {/* Loading indicator */}
+            {renderConversationFlow()}
+
+            {renderFollowUpQuestions()}
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="flex items-start space-x-2 max-w-[80%]">
@@ -204,18 +268,17 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               </div>
             )}
 
-            {/* Error handling */}
             {error && (
               <div className="flex justify-start">
                 <div className="flex items-start space-x-2 max-w-[80%]">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">
                     <AlertCircle className="w-4 h-4 text-white" />
                   </div>
-                  <div className="bg-red-900/50 border border-red-500 text-red-400 rounded-2xl px-4 py-3">
-                    <p className="text-sm">Lo siento, hubo un error. Por favor, inténtalo de nuevo.</p>
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
+                    <p className="text-sm text-red-300">Error: {error}</p>
                     <button
-                      onClick={() => reload()}
-                      className="text-red-300 hover:text-red-100 text-xs underline mt-1"
+                      onClick={reload}
+                      className="mt-2 text-xs text-red-200 hover:text-red-100 underline"
                     >
                       Reintentar
                     </button>
@@ -227,25 +290,21 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
-          <div className="p-4 border-t border-white/10 bg-slate-800/50">
-            <form onSubmit={onSubmit} className="flex items-center space-x-3">
-              <div className="flex-1 relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Escribe tu mensaje..."
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent pr-12"
-                  disabled={isLoading}
-                />
-              </div>
+          <div className="p-4 border-t border-white/10">
+            <form onSubmit={onSubmit} className="flex space-x-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={handleInputChange}
+                placeholder="Escribe tu mensaje..."
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isLoading}
+              />
               <button
                 type="submit"
-                disabled={!input.trim() || isLoading}
-                className="p-3 bg-gradient-to-r from-blue-500 to-slate-600 hover:from-blue-600 hover:to-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-200 flex items-center justify-center"
-                aria-label="Enviar mensaje"
+                disabled={isLoading || !input.trim()}
+                className="bg-gradient-to-r from-blue-500 to-slate-600 hover:from-blue-600 hover:to-slate-700 text-white p-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -258,7 +317,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
         </div>
       </div>
 
-      {/* Modal de Consulta */}
       <ChatConsultationModal
         isOpen={isModalOpen}
         onClose={hideConsultationModal}
