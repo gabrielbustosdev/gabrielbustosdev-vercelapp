@@ -34,3 +34,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+# Chatbot Conversacional – Modo Admin
+
+## Experiencia de Usuario
+El chatbot está diseñado para ofrecer una experiencia conversacional natural y fluida. El usuario final solo verá el historial de mensajes y el campo de entrada, sin paneles técnicos ni listas de información faltante.
+
+## Modo Admin (Métricas y Personalización)
+Las funcionalidades de métricas, personalización y paneles técnicos siguen activas en segundo plano, pero **solo son visibles en modo admin**.
+
+### ¿Cómo activar el modo admin?
+- Mientras el chat está abierto, presiona **Ctrl+M** para mostrar u ocultar los paneles de métricas, personalización, progreso e información faltante.
+- Esto permite al administrador o desarrollador acceder a información avanzada sin que el usuario final la vea.
+
+### ¿Qué paneles se ocultan al usuario final?
+- Preguntas sugeridas
+- Información faltante
+- Progreso de información
+- Panel de personalización
+
+### ¿Qué ve el usuario final?
+- Solo la conversación y el input, como en un chat real.
+
+---
+
+> **Nota:** La lógica de personalización y métricas sigue funcionando y recolectando datos en segundo plano, lista para usarse cuando se requiera.

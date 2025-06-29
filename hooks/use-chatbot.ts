@@ -1,8 +1,8 @@
-import React, { useReducer, useCallback, useContext, createContext, useEffect } from 'react'
+import React, { useReducer, useCallback, useContext, createContext/*, useEffect*/ } from 'react'
 import { useChat } from 'ai/react'
 import { 
-  ChatbotState, 
-  ChatbotAction, 
+  /*ChatbotState, 
+  ChatbotAction,*/ 
   ChatbotContextType, 
   ChatMessage, 
   ConversationData,
@@ -16,12 +16,12 @@ import { chatbotReducer, initialState } from './chatbot-reducer'
 import { ConversationEngine } from './conversation-engine'
 import { 
   processMessage, 
-  validateNLPResult, 
+  validateNLPResult/*, 
   type NLPResult, 
   type Entity, 
   type Intent, 
   type Sentiment, 
-  type InformationCompleteness 
+  type InformationCompleteness */
 } from '../lib/nlp-processor'
 
 // Crear el contexto del chatbot
@@ -70,8 +70,8 @@ export const useChatbotLogic = () => {
     input, 
     handleInputChange, 
     handleSubmit, 
-    isLoading, 
-    error, 
+    /*isLoading, 
+    error,*/ 
     reload 
   } = useChat({
     api: "/api/chat",
@@ -106,6 +106,23 @@ export const useChatbotLogic = () => {
       }
     }
   })
+
+  // Sincronizar los mensajes del AI SDK con el estado global del reducer SOLO si realmente cambiaron
+  React.useEffect(() => {
+    const areMessagesEqual = (a: any[], b: any[]) => {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i].id !== b[i].id || a[i].content !== b[i].content || a[i].role !== b[i].role) return false;
+      }
+      return true;
+    };
+    // Filtrar solo mensajes con roles válidos para el reducer
+    const validRoles = ['assistant', 'system', 'user'];
+    const filteredAiMessages = aiMessages.filter((msg: any) => validRoles.includes(msg.role)) as ChatMessage[];
+    if (filteredAiMessages.length > 0 && !areMessagesEqual(filteredAiMessages, state.messages)) {
+      dispatch({ type: 'SET_MESSAGES', payload: filteredAiMessages })
+    }
+  }, [aiMessages, state.messages])
 
   // ===== NUEVAS FUNCIONES DEL SISTEMA DE INTENCIONES =====
 

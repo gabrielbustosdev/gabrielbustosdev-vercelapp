@@ -80,6 +80,9 @@ export default function ChatBot({
     isWaitingForConfirmation: false
   })
 
+  // Modo admin para mostrar paneles ocultos (Ctrl+M)
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -114,6 +117,16 @@ export default function ChatBot({
     setShowProgress(NaturalConversationEngine.shouldShowProgress(naturalState))
     setShowSummary(Object.keys(naturalState.collectedData).length > 0)
   }, [naturalState])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key.toLowerCase() === 'm') {
+        setIsAdminMode((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -360,8 +373,8 @@ export default function ChatBot({
                   </div>
                 ))}
                 
-                {renderFollowUpQuestions()}
-                {renderConversationFlow()}
+                {isAdminMode && renderFollowUpQuestions()}
+                {isAdminMode && renderConversationFlow()}
                 
                 {isLoading && (
                   <div className="flex justify-start">
@@ -419,39 +432,34 @@ export default function ChatBot({
             </div>
 
             {/* Panel lateral derecho */}
-            <div className="w-80 bg-slate-800/50 border-l border-white/10 p-4 overflow-y-auto">
-              <div className="space-y-4">
-                {/* Display de personalización */}
-                <PersonalizationDisplay
-                  personality={clientPersonality}
-                  serviceContext={serviceContext}
-                  conversationMemory={conversationMemory}
-                  isVisible={showPersonalization}
-                  onToggle={() => setShowPersonalization(!showPersonalization)}
-                />
-
-                {/* Progreso de conversación */}
-                {showProgress && (
-                  <ConversationProgress
-                    collectedData={naturalState.collectedData}
-                    requiredFields={naturalState.requiredFields}
-                    currentStep={currentStep || undefined}
+            {isAdminMode && (
+              <div className="w-80 bg-slate-800/50 border-l border-white/10 p-4 overflow-y-auto">
+                <div className="space-y-4">
+                  <PersonalizationDisplay
+                    personality={clientPersonality}
+                    serviceContext={serviceContext}
+                    conversationMemory={conversationMemory}
+                    isVisible={showPersonalization}
+                    onToggle={() => setShowPersonalization(!showPersonalization)}
                   />
-                )}
-
-                {/* Resumen de información */}
-                {showSummary && (
-                  <InformationSummary
-                    collectedData={naturalState.collectedData}
-                    onEdit={handleEditField}
-                    isEditable={true}
-                  />
-                )}
-
-                {/* Display de guardrails */}
-                {showGuardrails && <GuardrailsDisplay />}
+                  {showProgress && (
+                    <ConversationProgress
+                      collectedData={naturalState.collectedData}
+                      requiredFields={naturalState.requiredFields}
+                      currentStep={currentStep || undefined}
+                    />
+                  )}
+                  {showSummary && (
+                    <InformationSummary
+                      collectedData={naturalState.collectedData}
+                      onEdit={handleEditField}
+                      isEditable={true}
+                    />
+                  )}
+                  {showGuardrails && <GuardrailsDisplay />}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
