@@ -1,9 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useRef, useEffect } from "react"
-import { Bot, User, Send, Loader2, AlertCircle, Calendar } from "lucide-react"
+import { useRef, useEffect, useState } from "react"
+import { Bot, User, Send, Loader2, AlertCircle, Calendar, Shield } from "lucide-react"
 import ChatConsultationModal from "./ChatConsultationModal"
+import GuardrailsDisplay from "./GuardrailsDisplay"
 import { useChatbot } from "../hooks/use-chatbot"
 import { ConversationIntent, ConversationFlow, MissingInfoTracker, FollowUpQuestion } from "../hooks/types"
 
@@ -30,6 +31,7 @@ export default function ChatBot({
 }: ChatBotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [showGuardrails, setShowGuardrails] = useState(false)
   
   const {
     state,
@@ -202,32 +204,31 @@ export default function ChatBot({
             </div>
             <div className="flex items-center space-x-2">
               <button
+                onClick={() => setShowGuardrails(!showGuardrails)}
+                className={`p-2 rounded-lg transition-colors duration-200 ${
+                  showGuardrails 
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                }`}
+                title="Mostrar/Ocultar Guardrails"
+              >
+                <Shield className="w-5 h-5" />
+              </button>
+              
+              <button
                 onClick={handleOpenConsultationModal}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
-                aria-label="Agendar consulta"
-                title="Agendar consulta"
+                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/10 rounded-lg transition-colors duration-200"
+                title="Abrir consulta"
               >
                 <Calendar className="w-5 h-5" />
               </button>
               
-              {messages.length > 1 && (
-                <button
-                  onClick={handleClearChat}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
-                  aria-label="Limpiar chat"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              )}
-              <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200" aria-label="Minimizar chat">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200" aria-label="Cerrar chat">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/10 rounded-lg transition-colors duration-200"
+                title="Cerrar chat"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -235,58 +236,72 @@ export default function ChatBot({
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div key={message.id}>
-                {renderMessage(message)}
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-400 py-8">
+                <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">¡Hola! Soy el asistente IA de Gabriel</h3>
+                <p className="text-sm">
+                  Estoy aquí para ayudarte con información sobre nuestros servicios de desarrollo web, 
+                  landing pages, plataformas con inteligencia artificial, rebranding y optimización de sitios web.
+                </p>
+                <div className="mt-6 space-y-2">
+                  <p className="text-xs text-gray-500">Puedes preguntarme sobre:</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {[
+                      "Servicios de desarrollo web",
+                      "Landing pages",
+                      "Integración de IA",
+                      "Consultoría técnica",
+                      "Procesos de trabajo"
+                    ].map((topic) => (
+                      <span key={topic} className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-xs text-blue-300">
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ))}
-
-            {renderConversationFlow()}
-
-            {renderFollowUpQuestions()}
-
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <div key={message.id}>
+                    {renderMessage(message)}
+                  </div>
+                ))}
+                {renderFollowUpQuestions()}
+                {renderConversationFlow()}
+              </>
+            )}
+            
             {isLoading && (
               <div className="flex justify-start">
                 <div className="flex items-start space-x-2 max-w-[80%]">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-slate-600 to-zinc-600 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-slate-600 to-zinc-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-white" />
                   </div>
-                  <div className="bg-white/10 border border-white/10 rounded-2xl px-4 py-3">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div 
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div 
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" 
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
+                  <div className="bg-white/10 text-gray-100 border border-white/10 rounded-2xl px-4 py-3">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Pensando...</span>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
+            
             {error && (
               <div className="flex justify-start">
                 <div className="flex items-start space-x-2 max-w-[80%]">
-                  <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <AlertCircle className="w-4 h-4 text-white" />
                   </div>
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
-                    <p className="text-sm text-red-300">Error: {error}</p>
-                    <button
-                      onClick={reload}
-                      className="mt-2 text-xs text-red-200 hover:text-red-100 underline"
-                    >
-                      Reintentar
-                    </button>
+                  <div className="bg-red-500/10 text-red-300 border border-red-500/20 rounded-2xl px-4 py-3">
+                    <p className="text-sm">Error: {error}</p>
                   </div>
                 </div>
               </div>
             )}
-
+            
             <div ref={messagesEndRef} />
           </div>
 
@@ -298,21 +313,37 @@ export default function ChatBot({
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Escribe tu mensaje..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isLoading}
               />
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="bg-gradient-to-r from-blue-500 to-slate-600 hover:from-blue-600 hover:to-slate-700 text-white p-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-3 rounded-lg transition-colors duration-200"
               >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
+                <Send className="w-5 h-5" />
               </button>
             </form>
+            
+            <div className="flex items-center justify-between mt-3 text-xs text-gray-400">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleClearChat}
+                  className="hover:text-gray-200 transition-colors duration-200"
+                >
+                  Limpiar chat
+                </button>
+                <button
+                  onClick={reload}
+                  className="hover:text-gray-200 transition-colors duration-200"
+                >
+                  Recargar
+                </button>
+              </div>
+              <div className="text-xs">
+                {messages.length} mensajes
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -321,6 +352,11 @@ export default function ChatBot({
         isOpen={isModalOpen}
         onClose={hideConsultationModal}
         conversationData={conversationData}
+      />
+
+      <GuardrailsDisplay
+        isVisible={showGuardrails}
+        onClose={() => setShowGuardrails(false)}
       />
     </>
   )
