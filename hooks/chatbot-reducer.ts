@@ -1,16 +1,20 @@
-import { ChatbotState, ChatbotAction, ConversationData, MissingInfoTracker } from './types'
+import { UnifiedChatbotState, ChatbotAction, ConversationData, MissingInfoTracker, ConversationIntent, ClientPersonality, ServiceContext } from './types'
 
-// Estado inicial del chatbot
-export const initialState: ChatbotState = {
+// Estado inicial unificado del chatbot
+export const unifiedInitialState: UnifiedChatbotState = {
   isOpen: false,
   messages: [
     {
       id: "welcome",
       role: "assistant",
-      content: "¡Hola! Soy el asistente de IA de Gabriel Bustos. Puedo ayudarte con información sobre servicios de desarrollo web, integración de IA, consultoría técnica y más. ¿En qué puedo ayudarte hoy?",
+      content: "¡Hola! Soy Gabriel Bustos, consultor senior en desarrollo web. ¿Qué desafío de negocio está enfrentando que podamos resolver con tecnología?",
       timestamp: new Date()
     }
   ],
+  loading: {
+    isLoading: false,
+    error: null
+  },
   conversationData: {
     name: "",
     email: "",
@@ -26,12 +30,6 @@ export const initialState: ChatbotState = {
     clientPhone: ""
   },
   conversationState: 'idle',
-  loading: {
-    isLoading: false,
-    error: null
-  },
-  showConsultationModal: false,
-  // Nuevos campos para el sistema de intenciones
   currentIntent: null,
   conversationFlow: null,
   missingInfo: {
@@ -47,176 +45,175 @@ export const initialState: ChatbotState = {
     project_description: true
   },
   followUpQuestions: [],
-  // Nuevos campos para NLP
   responseTone: 'professional',
   urgencyLevel: 'low',
   nlpEntities: [],
-  lastSentiment: null
+  lastSentiment: null,
+  clientPersonality: null,
+  serviceContext: null,
+  currentTone: 'casual',
+  conversationMemory: {
+    keyTopics: [],
+    decisions: [],
+    concerns: [],
+    preferences: [],
+    timeline: [],
+    budgetMentions: [],
+    technicalQuestions: []
+  },
+  naturalConversation: {
+    currentStep: null,
+    collectedData: {},
+    requiredFields: ['name', 'email', 'projectType', 'requirements'],
+    conversationContext: [],
+    lastUserMessage: '',
+    isWaitingForConfirmation: false,
+    consultationStage: 'idle',
+    businessProblem: '',
+    kpis: [],
+    competitiveContext: '',
+    technicalConstraints: [],
+    proposedSolutions: [],
+    roiEstimate: '',
+    implementationRoadmap: []
+  },
+  modals: {
+    showConsultationModal: false,
+    showConfirmationDialog: false,
+    showProgress: false,
+    showSummary: false,
+    showGuardrails: false,
+    showPersonalization: false
+  },
+  confirmation: {
+    isWaitingForConfirmation: false,
+    confirmationData: {},
+    confirmationMessage: '',
+    suggestedActions: []
+  }
 }
 
-// Función para actualizar datos de conversación de forma inmutable
-const updateConversationData = (
-  currentData: ConversationData, 
-  updates: Partial<ConversationData>
-): ConversationData => {
-  return { ...currentData, ...updates }
-}
+// Acciones unificadas
+export type UnifiedChatbotAction = 
+  | { type: 'SET_MESSAGES'; payload: any[] }
+  | { type: 'ADD_MESSAGE'; payload: any }
+  | { type: 'UPDATE_CONVERSATION_DATA'; payload: Partial<ConversationData> }
+  | { type: 'SET_CURRENT_INTENT'; payload: ConversationIntent }
+  | { type: 'SET_CLIENT_PERSONALITY'; payload: ClientPersonality }
+  | { type: 'SET_SERVICE_CONTEXT'; payload: ServiceContext }
+  | { type: 'UPDATE_NATURAL_CONVERSATION'; payload: Partial<UnifiedChatbotState['naturalConversation']> }
+  | { type: 'SET_MODAL_STATE'; payload: { modal: keyof UnifiedChatbotState['modals']; isOpen: boolean } }
+  | { type: 'SET_CONFIRMATION_STATE'; payload: Partial<UnifiedChatbotState['confirmation']> }
+  | { type: 'SET_LOADING'; payload: { isLoading: boolean; error?: string | null } }
+  | { type: 'CLEAR_CHAT' }
+  | { type: 'OPEN_CHAT' }
+  | { type: 'CLOSE_CHAT' }
 
-// Función para actualizar información faltante de forma inmutable
-const updateMissingInfo = (
-  currentMissingInfo: MissingInfoTracker,
-  updates: Partial<MissingInfoTracker>
-): MissingInfoTracker => {
-  return { ...currentMissingInfo, ...updates }
-}
-
-// Reducer principal del chatbot
-export function chatbotReducer(state: ChatbotState, action: ChatbotAction): ChatbotState {
+// Reducer unificado
+export const unifiedChatbotReducer = (state: UnifiedChatbotState, action: UnifiedChatbotAction): UnifiedChatbotState => {
   switch (action.type) {
-    case 'OPEN_CHAT':
-      return {
-        ...state,
-        isOpen: true,
-        conversationState: state.conversationState === 'idle' ? 'greeting' : state.conversationState
-      }
-
-    case 'CLOSE_CHAT':
-      return {
-        ...state,
-        isOpen: false
-      }
-
-    case 'ADD_MESSAGE':
-      return {
-        ...state,
-        messages: [...state.messages, { ...action.payload, timestamp: new Date() }]
-      }
-
     case 'SET_MESSAGES':
       return {
         ...state,
         messages: action.payload
       }
-
+    
+    case 'ADD_MESSAGE':
+      return {
+        ...state,
+        messages: [...state.messages, action.payload]
+      }
+    
     case 'UPDATE_CONVERSATION_DATA':
       return {
         ...state,
-        conversationData: updateConversationData(state.conversationData, action.payload)
-      }
-
-    case 'SET_CONVERSATION_STATE':
-      return {
-        ...state,
-        conversationState: action.payload
-      }
-
-    case 'SET_LOADING':
-      return {
-        ...state,
-        loading: {
-          ...state.loading,
-          isLoading: action.payload
+        conversationData: {
+          ...state.conversationData,
+          ...action.payload
+        },
+        // Sincronizar con naturalConversation
+        naturalConversation: {
+          ...state.naturalConversation,
+          currentStep: null // Reset step when data is updated
         }
       }
-
-    case 'SET_ERROR':
-      return {
-        ...state,
-        loading: {
-          ...state.loading,
-          error: action.payload
-        }
-      }
-
-    case 'SHOW_CONSULTATION_MODAL':
-      return {
-        ...state,
-        showConsultationModal: true,
-        conversationState: 'consultation_modal_open'
-      }
-
-    case 'HIDE_CONSULTATION_MODAL':
-      return {
-        ...state,
-        showConsultationModal: false
-      }
-
-    case 'RESET_CHAT':
-      return {
-        ...initialState,
-        isOpen: state.isOpen // Mantener el estado de apertura
-      }
-
-    case 'CLEAR_MESSAGES':
-      return {
-        ...state,
-        messages: [initialState.messages[0]], // Mantener solo el mensaje de bienvenida
-        conversationData: initialState.conversationData,
-        conversationState: 'idle'
-      }
-
-    // Nuevas acciones para el sistema de intenciones
+    
     case 'SET_CURRENT_INTENT':
       return {
         ...state,
         currentIntent: action.payload
       }
-
-    case 'SET_CONVERSATION_FLOW':
+    
+    case 'SET_CLIENT_PERSONALITY':
       return {
         ...state,
-        conversationFlow: action.payload
+        clientPersonality: action.payload,
+        // Sincronizar tono con personalidad
+        currentTone: action.payload.characteristics.communicationStyle === 'formal' ? 'formal' :
+                    action.payload.characteristics.communicationStyle === 'technical' ? 'technical' :
+                    action.payload.type === 'entrepreneur' ? 'enthusiastic' : 'casual'
       }
-
-    case 'UPDATE_MISSING_INFO':
+    
+    case 'SET_SERVICE_CONTEXT':
       return {
         ...state,
-        missingInfo: updateMissingInfo(state.missingInfo, action.payload)
+        serviceContext: action.payload
       }
-
-    case 'ADD_FOLLOW_UP_QUESTION':
+    
+    case 'UPDATE_NATURAL_CONVERSATION':
       return {
         ...state,
-        followUpQuestions: [...state.followUpQuestions, action.payload]
+        naturalConversation: {
+          ...state.naturalConversation,
+          ...action.payload
+        }
       }
-
-    case 'REMOVE_FOLLOW_UP_QUESTION':
+    
+    case 'SET_MODAL_STATE':
       return {
         ...state,
-        followUpQuestions: state.followUpQuestions.filter(q => q.id !== action.payload)
+        modals: {
+          ...state.modals,
+          [action.payload.modal]: action.payload.isOpen
+        }
       }
-
-    case 'CLEAR_FOLLOW_UP_QUESTIONS':
+    
+    case 'SET_CONFIRMATION_STATE':
       return {
         ...state,
-        followUpQuestions: []
+        confirmation: {
+          ...state.confirmation,
+          ...action.payload
+        }
       }
-
-    // Nuevas acciones para NLP
-    case 'SET_RESPONSE_TONE':
+    
+    case 'SET_LOADING':
       return {
         ...state,
-        responseTone: action.payload
+        loading: {
+          isLoading: action.payload.isLoading,
+          error: action.payload.error || null
+        }
       }
-
-    case 'SET_URGENCY_LEVEL':
+    
+    case 'CLEAR_CHAT':
+      return {
+        ...unifiedInitialState,
+        isOpen: state.isOpen // Mantener estado de apertura
+      }
+    
+    case 'OPEN_CHAT':
       return {
         ...state,
-        urgencyLevel: action.payload
+        isOpen: true
       }
-
-    case 'SET_NLP_ENTITIES':
+    
+    case 'CLOSE_CHAT':
       return {
         ...state,
-        nlpEntities: action.payload
+        isOpen: false
       }
-
-    case 'SET_LAST_SENTIMENT':
-      return {
-        ...state,
-        lastSentiment: action.payload
-      }
-
+    
     default:
       return state
   }

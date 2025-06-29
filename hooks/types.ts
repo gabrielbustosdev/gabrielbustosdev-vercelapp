@@ -79,6 +79,11 @@ export interface ChatbotState {
   urgencyLevel: UrgencyLevel
   nlpEntities: NLPEntity[]
   lastSentiment: NLPSentiment | null
+  // Campos para personalización
+  clientPersonality: ClientPersonality | null
+  serviceContext: ServiceContext | null
+  currentTone: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic'
+  conversationMemory: ConversationMemory
 }
 
 // Acciones para useReducer
@@ -107,6 +112,13 @@ export type ChatbotAction =
   | { type: 'SET_URGENCY_LEVEL'; payload: UrgencyLevel }
   | { type: 'SET_NLP_ENTITIES'; payload: NLPEntity[] }
   | { type: 'SET_LAST_SENTIMENT'; payload: NLPSentiment }
+  // Acciones para personalización
+  | { type: 'UPDATE_PERSONALIZATION'; payload: {
+      clientPersonality?: ClientPersonality | null
+      serviceContext?: ServiceContext | null
+      currentTone?: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic'
+      conversationMemory?: ConversationMemory
+    }}
 
 // Tipos para análisis de mensajes
 export interface MessageAnalysis {
@@ -261,6 +273,8 @@ export interface ChatbotContextType {
   getConversationFlow: (intent: ConversationIntent) => ConversationFlow | null
   generateFollowUpQuestions: (missingInfo: MissingInfoTracker) => FollowUpQuestion[]
   processUserResponse: (message: string, currentFlow: ConversationFlow) => void
+  // Información de personalización
+  personalization: PersonalizationState & PersonalizationActions
 }
 
 // ===== NUEVOS TIPOS PARA PERSONALIZACIÓN DINÁMICA =====
@@ -332,4 +346,116 @@ export type ExtendedChatbotAction = ChatbotAction
   | { type: 'SET_SERVICE_CONTEXT'; payload: ServiceContext }
   | { type: 'UPDATE_CONVERSATION_MEMORY'; payload: Partial<ConversationMemory> }
   | { type: 'SET_PERSONALIZED_RESPONSE'; payload: PersonalizedResponse }
-  | { type: 'SET_CURRENT_TONE'; payload: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic' } 
+  | { type: 'SET_CURRENT_TONE'; payload: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic' }
+
+// Importar tipos de personalización
+export interface PersonalizationState {
+  clientPersonality: ClientPersonality | null
+  serviceContext: ServiceContext | null
+  conversationMemory: ConversationMemory
+  currentTone: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic'
+  isAnalyzing: boolean
+}
+
+export interface PersonalizationActions {
+  analyzeConversation: (messages: ChatMessage[], conversationData: Partial<ConversationData>) => void
+  generatePersonalizedResponse: (
+    intent: ConversationIntent,
+    conversationData: Partial<ConversationData>
+  ) => PersonalizedResponse
+  updateMemory: (newMemory: Partial<ConversationMemory>) => void
+  resetPersonalization: () => void
+}
+
+// Estado unificado del chatbot - Única fuente de verdad
+export interface UnifiedChatbotState {
+  // Estado básico del chat
+  isOpen: boolean
+  messages: ChatMessage[]
+  loading: LoadingState
+  
+  // Datos de conversación unificados (elimina duplicación entre conversationData y collectedData)
+  conversationData: ConversationData
+  
+  // Estado de conversación unificado
+  conversationState: ConversationState
+  
+  // Intención actual (sincronizada con personalización)
+  currentIntent: ConversationIntent | null
+  
+  // Flujo de conversación
+  conversationFlow: ConversationFlow | null
+  
+  // Información faltante
+  missingInfo: MissingInfoTracker
+  
+  // Preguntas de seguimiento
+  followUpQuestions: FollowUpQuestion[]
+  
+  // Análisis NLP
+  responseTone: ResponseTone
+  urgencyLevel: UrgencyLevel
+  nlpEntities: NLPEntity[]
+  lastSentiment: NLPSentiment | null
+  
+  // Personalización (sincronizada con currentIntent)
+  clientPersonality: ClientPersonality | null
+  serviceContext: ServiceContext | null
+  currentTone: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic'
+  conversationMemory: ConversationMemory
+  
+  // Estado del motor de conversación natural (unificado)
+  naturalConversation: {
+    currentStep: keyof ConversationData | null
+    collectedData: Partial<ConversationData>
+    requiredFields: (keyof ConversationData)[]
+    conversationContext: string[]
+    lastUserMessage: string
+    isWaitingForConfirmation: boolean
+    consultationStage: ConsultationStage
+    businessProblem: string
+    kpis: string[]
+    competitiveContext: string
+    technicalConstraints: string[]
+    proposedSolutions: string[]
+    roiEstimate: string
+    implementationRoadmap: string[]
+  }
+  
+  // Estado de modales unificado (elimina conflicto entre showConsultationModal e isWaitingForConfirmation)
+  modals: {
+    showConsultationModal: boolean
+    showConfirmationDialog: boolean
+    showProgress: boolean
+    showSummary: boolean
+    showGuardrails: boolean
+    showPersonalization: boolean
+  }
+  
+  // Estado de confirmación unificado
+  confirmation: {
+    isWaitingForConfirmation: boolean
+    confirmationData: Partial<ConversationData>
+    confirmationMessage: string
+    suggestedActions: string[]
+  }
+}
+
+export type ConsultationStage = 'idle' | 'discovery' | 'technical_analysis' | 'value_proposal' | 'agendado';
+
+export interface NaturalConversationState {
+  currentStep: keyof ConversationData | null
+  collectedData: Partial<ConversationData>
+  requiredFields: (keyof ConversationData)[]
+  conversationContext: string[]
+  lastUserMessage: string
+  isWaitingForConfirmation: boolean
+  consultationStage: ConsultationStage
+  businessProblem: string
+  kpis: string[]
+  competitiveContext: string
+  technicalConstraints: string[]
+  proposedSolutions: string[]
+  roiEstimate: string
+  implementationRoadmap: string[]
+} 

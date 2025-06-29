@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { 
   ClientPersonality, 
   ServiceContext, 
@@ -50,45 +50,53 @@ export const usePersonalization = (): PersonalizationState & PersonalizationActi
     messages: ChatMessage[], 
     conversationData: Partial<ConversationData>
   ) => {
+    // Evitar análisis si ya se está analizando
+    if (state.isAnalyzing) {
+      return
+    }
     setState(prev => ({ ...prev, isAnalyzing: true }))
-
     try {
       // Detectar personalidad del cliente
       const personality = ClientPersonalityDetector.detectPersonality(messages, conversationData)
-      
       // Detectar contexto del servicio
       const serviceContext = ClientPersonalityDetector.detectServiceContext(messages)
-      
       // Construir memoria de conversación
       const conversationMemory = ClientPersonalityDetector.buildConversationMemory(messages)
-      
       // Determinar tono actual
       const currentTone = personality.characteristics.communicationStyle === 'formal' ? 'formal' :
                          personality.characteristics.communicationStyle === 'technical' ? 'technical' :
                          personality.type === 'entrepreneur' ? 'enthusiastic' :
                          personality.type === 'executive' ? 'formal' : 'casual'
-
-      setState(prev => ({
-        ...prev,
-        clientPersonality: personality,
-        serviceContext,
-        conversationMemory,
-        currentTone,
-        isAnalyzing: false
-      }))
-
+      // Solo actualizar el estado si el resultado realmente cambió
+      setState(prev => {
+        if (
+          JSON.stringify(prev.clientPersonality) === JSON.stringify(personality) &&
+          JSON.stringify(prev.serviceContext) === JSON.stringify(serviceContext) &&
+          JSON.stringify(prev.conversationMemory) === JSON.stringify(conversationMemory) &&
+          prev.currentTone === currentTone
+        ) {
+          return { ...prev, isAnalyzing: false }
+        }
+        return {
+          ...prev,
+          clientPersonality: personality,
+          serviceContext,
+          conversationMemory,
+          currentTone,
+          isAnalyzing: false
+        }
+      })
       console.log('[Personalization] Analysis complete:', {
         personality: personality.type,
         confidence: personality.confidence,
         serviceType: serviceContext.serviceType,
         tone: currentTone
       })
-
     } catch (error) {
       console.error('[Personalization] Analysis failed:', error)
       setState(prev => ({ ...prev, isAnalyzing: false }))
     }
-  }, [])
+  }, [state.isAnalyzing])
 
   const generatePersonalizedResponse = useCallback((
     intent: ConversationIntent,
@@ -144,12 +152,17 @@ export const usePersonalization = (): PersonalizationState & PersonalizationActi
     })
   }, [])
 
-  return {
-    ...state,
+  // Usar useMemo para evitar recreaciones constantes del objeto
+  const personalizationActions = useMemo(() => ({
     analyzeConversation,
     generatePersonalizedResponse,
     updateMemory,
     resetPersonalization
+  }), [analyzeConversation, generatePersonalizedResponse, updateMemory, resetPersonalization])
+
+  return {
+    ...state,
+    ...personalizationActions
   }
 }
 

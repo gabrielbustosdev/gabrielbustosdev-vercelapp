@@ -7,13 +7,12 @@ import ChatConsultationModal from "./ChatConsultationModal"
 import GuardrailsDisplay from "./GuardrailsDisplay"
 import { ConversationProgress } from "./ConversationProgress"
 import { InformationSummary } from "./InformationSummary"
-import { RealTimeValidation } from "./RealTimeValidation"
 import { ConfirmationDialog } from "./ConfirmationDialog"
 import { PersonalizationDisplay } from "./PersonalizationDisplay"
-import { useChatbot } from "../hooks/use-chatbot"
+import { useChatbot } from "../hooks/use-chatbot-unified"
 import { usePersonalization } from "../hooks/use-personalization"
 import { ConversationIntent, ConversationFlow, MissingInfoTracker, FollowUpQuestion, ConversationData } from "../hooks/types"
-import { NaturalConversationEngine, NaturalConversationState } from "../hooks/natural-conversation-engine"
+import { NaturalConversationEngine } from "../hooks/natural-conversation-engine"
 
 interface ChatBotProps {
   isOpen: boolean
@@ -41,9 +40,8 @@ export default function ChatBot({
   const [showGuardrails, setShowGuardrails] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
-  const [showConfirmation, setShowConfirmation] = useState(false)
   const [showPersonalization, setShowPersonalization] = useState(false)
-  const [currentStep, setCurrentStep] = useState<keyof ConversationData | null>(null)
+  const [pendingConsultation, setPendingConsultation] = useState(false)
   
   const {
     state,
@@ -53,7 +51,9 @@ export default function ChatBot({
     showConsultationModal,
     hideConsultationModal,
     clearMessages,
-    updateConversationData
+    updateConversationData,
+    updateNaturalConversation,
+    setConfirmationState
   } = useChatbot()
 
   // Hook de personalización
@@ -62,23 +62,13 @@ export default function ChatBot({
     serviceContext,
     conversationMemory,
     currentTone,
-    isAnalyzing,
     analyzeConversation,
     resetPersonalization
   } = usePersonalization()
 
-  const { messages, loading, showConsultationModal: isModalOpen, conversationData } = state
+  const { messages, loading, modals, conversationData, naturalConversation } = state
   const { isLoading, error } = loading
-
-  // Estado del motor de conversación natural
-  const [naturalState, setNaturalState] = useState<NaturalConversationState>({
-    currentStep: null,
-    collectedData: {},
-    requiredFields: ['name', 'email', 'projectType', 'requirements'],
-    conversationContext: [],
-    lastUserMessage: '',
-    isWaitingForConfirmation: false
-  })
+  const { showConsultationModal: isModalOpen } = modals
 
   // Modo admin para mostrar paneles ocultos (Ctrl+M)
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -97,86 +87,98 @@ export default function ChatBot({
     }
   }, [isOpen])
 
-  // Actualizar estado natural cuando cambian los datos de conversación
+  // Analizar conversación para personalización cuando cambian los mensajes
   useEffect(() => {
-    setNaturalState(prev => ({
-      ...prev,
-      collectedData: conversationData
-    }))
-  }, [conversationData])
-
-  // Analizar conversación para personalización cuando hay suficientes mensajes
-  useEffect(() => {
-    if (messages.length >= 2 && !isAnalyzing) {
+    if (messages.length > 1) {
       analyzeConversation(messages, conversationData)
     }
-  }, [messages, conversationData, analyzeConversation, isAnalyzing])
+  }, [messages, conversationData, analyzeConversation])
 
-  // Mostrar progreso cuando hay datos recopilados
-  useEffect(() => {
-    setShowProgress(NaturalConversationEngine.shouldShowProgress(naturalState))
-    setShowSummary(Object.keys(naturalState.collectedData).length > 0)
-  }, [naturalState])
-
+  // Efecto para manejar teclas de acceso rápido
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'm') {
-        setIsAdminMode((prev) => !prev);
+        setIsAdminMode((prev: boolean) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Cuando el modelo indique que es momento de agendar, mostrar el resumen antes de abrir el modal
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.content.includes('[AUTO_OPEN_CONSULTATION]')) {
+        setShowSummary(true);
+        setPendingConsultation(true);
+      }
+    }
+  }, [messages]);
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
     if (!input.trim()) return
 
-    // Procesar con motor de conversación natural si hay una intención
-    if (currentIntent) {
-      const naturalResponse = NaturalConversationEngine.processUserMessage(
-        input,
-        naturalState,
-        currentIntent
-      )
-
-      // Actualizar estado natural
-      setNaturalState(prev => ({
-        ...prev,
-        currentStep: naturalResponse.nextStep,
-        collectedData: { ...prev.collectedData },
-        lastUserMessage: input,
-        isWaitingForConfirmation: naturalResponse.shouldAskForConfirmation
-      }))
-
-      // Si hay información extraída, actualizar datos de conversación
-      if (naturalResponse.context) {
-        updateConversationData(naturalResponse.context as Partial<ConversationData>)
-      }
-
-      // Mostrar confirmación si es necesario
-      if (naturalResponse.shouldAskForConfirmation) {
-        setShowConfirmation(true)
-      }
+    // Crear intención por defecto si no existe
+    const defaultIntent: ConversationIntent = {
+      type: 'general_information',
+      confidence: 0.5,
+      keywords: [],
+      context: {},
+      timestamp: new Date()
     }
 
+    // Procesar con motor de conversación natural SOLO para extraer datos y determinar contexto
+    const naturalResponse = NaturalConversationEngine.processUserMessage(
+      input,
+      naturalConversation,
+      defaultIntent,
+      clientPersonality,
+      serviceContext,
+      conversationMemory
+    )
+
+    // Actualizar estado natural correctamente con datos extraídos (en segundo plano)
+    updateNaturalConversation({
+      currentStep: naturalResponse.nextStep,
+      collectedData: naturalResponse.extractedData || {},
+      lastUserMessage: input,
+      isWaitingForConfirmation: false,
+      consultationStage: naturalResponse.context === 'discovery' ? 'discovery' :
+                        naturalResponse.context === 'technical_analysis' ? 'technical_analysis' :
+                        naturalResponse.context === 'value_proposal' ? 'value_proposal' : 'idle'
+    })
+
+    // Actualizar datos de conversación si hay información extraída (en segundo plano)
+    if (naturalResponse.extractedData && Object.keys(naturalResponse.extractedData).length > 0) {
+      updateConversationData(naturalResponse.extractedData)
+    }
+
+    // Verificar si debe abrirse el modal de consulta automáticamente (en segundo plano)
+    if (naturalResponse.message.includes('[AUTO_OPEN_CONSULTATION]')) {
+      setTimeout(() => {
+        showConsultationModal()
+      }, 1000)
+    }
+
+    // SIEMPRE usar AI SDK para la respuesta al usuario (unificar interfaz)
     handleSubmit(e)
   }
 
-  const handleEditField = (field: keyof ConversationData) => {
-    setCurrentStep(field)
-    setShowConfirmation(false)
-    // Enfocar el input para que el usuario pueda editar
-    setTimeout(() => {
-      inputRef.current?.focus()
-    }, 100)
-  }
-
   const handleConfirmInformation = () => {
-    setShowConfirmation(false)
+    setConfirmationState({ isWaitingForConfirmation: false })
     showConsultationModal()
   }
+
+  const handleConfirmSummary = (data: Partial<ConversationData>) => {
+    updateConversationData(data);
+    setShowSummary(false);
+    setPendingConsultation(false);
+    updateNaturalConversation({ consultationStage: 'agendado' });
+    showConsultationModal();
+  };
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("es-ES", {
@@ -265,17 +267,25 @@ export default function ChatBot({
 
   const handleClearChat = () => {
     clearMessages()
-    setNaturalState({
+    updateNaturalConversation({
       currentStep: null,
       collectedData: {},
       requiredFields: ['name', 'email', 'projectType', 'requirements'],
       conversationContext: [],
       lastUserMessage: '',
-      isWaitingForConfirmation: false
+      isWaitingForConfirmation: false,
+      consultationStage: 'idle',
+      businessProblem: '',
+      kpis: [],
+      competitiveContext: '',
+      technicalConstraints: [],
+      proposedSolutions: [],
+      roiEstimate: '',
+      implementationRoadmap: []
     })
     setShowProgress(false)
     setShowSummary(false)
-    setShowConfirmation(false)
+    setConfirmationState({ isWaitingForConfirmation: false })
     resetPersonalization()
   }
 
@@ -406,7 +416,7 @@ export default function ChatBot({
                       type="text"
                       value={input}
                       onChange={handleInputChange}
-                      placeholder={currentStep ? `Ingresa tu ${String(currentStep)}...` : "Escribe tu mensaje..."}
+                      placeholder="Escribe tu mensaje..."
                       className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={isLoading}
                     />
@@ -418,15 +428,6 @@ export default function ChatBot({
                       <Send className="w-4 h-4 text-white" />
                     </button>
                   </div>
-                  
-                  {/* Validación en tiempo real */}
-                  {currentStep && (
-                    <RealTimeValidation
-                      field={currentStep}
-                      value={input}
-                      onValidationChange={() => {}}
-                    />
-                  )}
                 </form>
               </div>
             </div>
@@ -435,6 +436,22 @@ export default function ChatBot({
             {isAdminMode && (
               <div className="w-80 bg-slate-800/50 border-l border-white/10 p-4 overflow-y-auto">
                 <div className="space-y-4">
+                  {/* Indicador de etapa actual */}
+                  <div className="p-3 rounded bg-blue-900/40 border border-blue-500/20 mb-2">
+                    <span className="text-xs text-blue-300 font-semibold">Etapa actual:</span>
+                    <span className="ml-2 text-sm text-white font-bold">
+                      {(() => {
+                        switch (naturalConversation.consultationStage) {
+                          case 'discovery': return 'Descubrimiento';
+                          case 'technical_analysis': return 'Análisis técnico';
+                          case 'value_proposal': return 'Propuesta de valor';
+                          case 'idle': return 'Inicio';
+                          default: return naturalConversation.consultationStage;
+                        }
+                      })()}
+                    </span>
+                  </div>
+                  {/* Resto del panel admin */}
                   <PersonalizationDisplay
                     personality={clientPersonality}
                     serviceContext={serviceContext}
@@ -444,15 +461,14 @@ export default function ChatBot({
                   />
                   {showProgress && (
                     <ConversationProgress
-                      collectedData={naturalState.collectedData}
-                      requiredFields={naturalState.requiredFields}
-                      currentStep={currentStep || undefined}
+                      collectedData={naturalConversation.collectedData}
+                      requiredFields={naturalConversation.requiredFields}
                     />
                   )}
                   {showSummary && (
                     <InformationSummary
-                      collectedData={naturalState.collectedData}
-                      onEdit={handleEditField}
+                      collectedData={naturalConversation.collectedData}
+                      onConfirm={handleConfirmSummary}
                       isEditable={true}
                     />
                   )}
@@ -466,20 +482,20 @@ export default function ChatBot({
 
       {/* Modal de confirmación */}
       <ConfirmationDialog
-        collectedData={naturalState.collectedData}
-        isOpen={showConfirmation}
+        collectedData={naturalConversation.collectedData}
+        isOpen={state.confirmation.isWaitingForConfirmation}
         onConfirm={handleConfirmInformation}
-        onEdit={() => setShowConfirmation(false)}
-        onCancel={() => setShowConfirmation(false)}
+        onEdit={() => setConfirmationState({ isWaitingForConfirmation: false })}
+        onCancel={() => setConfirmationState({ isWaitingForConfirmation: false })}
         title="Confirmar información recopilada"
         confirmText="Agendar consulta"
         editText="Editar información"
         cancelText="Cancelar"
       />
 
-      {/* Modal de consulta */}
+      {/* Modal de consulta solo si no hay resumen pendiente */}
       <ChatConsultationModal
-        isOpen={isModalOpen}
+        isOpen={isModalOpen && !pendingConsultation}
         onClose={hideConsultationModal}
         conversationData={conversationData}
       />

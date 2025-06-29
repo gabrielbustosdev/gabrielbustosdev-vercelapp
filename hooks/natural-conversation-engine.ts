@@ -1,4 +1,4 @@
-import { ConversationData, ConversationIntent, IntentType } from './types'
+import { ConversationData, ConversationIntent, IntentType, ConsultationStage } from './types'
 import { PersonalizedResponseEngine } from './personalized-response-engine'
 import { ClientPersonality, ServiceContext, ConversationMemory } from './types'
 
@@ -9,6 +9,14 @@ export interface NaturalConversationState {
   conversationContext: string[]
   lastUserMessage: string
   isWaitingForConfirmation: boolean
+  consultationStage: ConsultationStage
+  businessProblem: string
+  kpis: string[]
+  competitiveContext: string
+  technicalConstraints: string[]
+  proposedSolutions: string[]
+  roiEstimate: string
+  implementationRoadmap: string[]
 }
 
 export interface NaturalResponse {
@@ -17,6 +25,8 @@ export interface NaturalResponse {
   shouldAskForConfirmation: boolean
   suggestedActions?: string[]
   context?: string
+  extractedData?: Partial<ConversationData>
+  shouldUseAI?: boolean
 }
 
 export class NaturalConversationEngine {
@@ -101,16 +111,86 @@ export class NaturalConversationEngine {
     clientPhone: (value) => value.replace(/\D/g, '').length >= 7
   }
 
+  private static readonly CONSULTATIVE_QUESTIONS = {
+    discovery: {
+      business_problem: [
+        "¿Cuál es el problema de negocio principal que estás tratando de resolver?",
+        "¿Qué desafío específico está afectando tu operación actual?",
+        "¿Qué resultado de negocio necesitas lograr con esta solución?"
+      ],
+      kpis: [
+        "¿Qué KPIs específicos necesitas mejorar? (ej: conversiones, tiempo de respuesta, costos)",
+        "¿Cómo mides actualmente el éxito de tu operación digital?",
+        "¿Qué métricas son más importantes para tu equipo ejecutivo?"
+      ],
+      competitive_context: [
+        "¿Cómo se compara tu propuesta con la competencia actual?",
+        "¿Qué ventajas competitivas necesitas desarrollar?",
+        "¿Qué están haciendo tus competidores que te preocupa?"
+      ],
+      current_state: [
+        "¿Qué soluciones tecnológicas tienes implementadas actualmente?",
+        "¿Cuáles son las principales limitaciones de tu infraestructura actual?",
+        "¿Qué procesos manuales podrían automatizarse?"
+      ]
+    },
+    technical_analysis: {
+      architecture: [
+        "¿Qué tipo de arquitectura prefieres? (monolítica, microservicios, serverless)",
+        "¿Tienes preferencias tecnológicas específicas?",
+        "¿Qué limitaciones de escalabilidad has experimentado?"
+      ],
+      integration: [
+        "¿Con qué sistemas necesitas integrarte?",
+        "¿Qué APIs externas utilizas actualmente?",
+        "¿Necesitas integración con CRM, ERP u otros sistemas?"
+      ],
+      security: [
+        "¿Qué requisitos de seguridad específicos tienes?",
+        "¿Manejas datos sensibles de clientes?",
+        "¿Necesitas cumplir con regulaciones específicas?"
+      ],
+      performance: [
+        "¿Cuántos usuarios concurrentes esperas?",
+        "¿Qué tiempos de respuesta necesitas?",
+        "¿Tienes requisitos específicos de disponibilidad?"
+      ]
+    },
+    value_proposal: {
+      roi: [
+        "¿Cuál es el valor monetario de resolver este problema para tu negocio?",
+        "¿Cuánto tiempo puedes esperar para ver resultados?",
+        "¿Qué impacto tendría en tus ingresos mensuales?"
+      ],
+      timeline: [
+        "¿Cuál es tu timeline ideal para implementación?",
+        "¿Hay fechas críticas de negocio que debamos considerar?",
+        "¿Prefieres implementación por fases o todo de una vez?"
+      ],
+      resources: [
+        "¿Tienes un equipo técnico interno para el proyecto?",
+        "¿Qué nivel de participación esperas tener en el desarrollo?",
+        "¿Necesitas capacitación para tu equipo?"
+      ]
+    }
+  }
+
   static processUserMessage(
     message: string,
     state: NaturalConversationState,
-    intent: ConversationIntent
+    intent: ConversationIntent,
+    personality?: ClientPersonality | null,
+    serviceContext?: ServiceContext | null,
+    memory?: ConversationMemory
   ): NaturalResponse {
     const lowerMessage = message.toLowerCase()
     
+    // Determinar la etapa consultiva actual
+    const currentStage = this.determineConsultationStage(state, intent, lowerMessage)
+    
     // Si el usuario está confirmando información
     if (this.isConfirmationMessage(lowerMessage)) {
-      return this.handleConfirmation(state)
+      return this.handleConfirmation(state, currentStage)
     }
     
     // Si el usuario quiere editar algo
@@ -118,24 +198,39 @@ export class NaturalConversationEngine {
       return this.handleEditRequest(lowerMessage, state)
     }
     
-    // Extraer información del mensaje
-    const extractedData = this.extractInformationFromMessage(message, state.currentStep)
-    
-    // Actualizar datos recopilados
-    const updatedData = { ...state.collectedData, ...extractedData }
-    
-    // Determinar el siguiente paso
-    const nextStep = this.determineNextStep(updatedData, state.requiredFields)
-    
-    // Generar respuesta natural
-    return this.generateNaturalResponse(
-      message,
-      updatedData,
-      nextStep,
-      state.currentStep,
-      intent,
-      extractedData
-    )
+    // Procesar según la etapa consultiva
+    switch (currentStage) {
+      case 'discovery':
+        return this.processDiscoveryStage(message, state, intent, personality, serviceContext, memory)
+      case 'technical_analysis':
+        return this.processTechnicalAnalysisStage(message, state, intent, personality, serviceContext, memory)
+      case 'value_proposal':
+        return this.processValueProposalStage(message, state, intent, personality, serviceContext, memory)
+      default:
+        return this.processInitialStage(message, state, intent, personality, serviceContext, memory)
+    }
+  }
+
+  private static determineConsultationStage(
+    state: NaturalConversationState, 
+    intent: ConversationIntent, 
+    message: string
+  ): ConsultationStage {
+    // Si ya tenemos una etapa definida, mantenerla
+    if (state.consultationStage && state.consultationStage !== 'idle') {
+      return state.consultationStage
+    }
+    // Determinar etapa basada en la intención y contenido del mensaje
+    if (intent.type === 'project_inquiry' || message.includes('proyecto') || message.includes('desarrollar')) {
+      return 'discovery'
+    }
+    if (message.includes('técnico') || message.includes('tecnología') || message.includes('arquitectura')) {
+      return 'technical_analysis'
+    }
+    if (message.includes('precio') || message.includes('presupuesto') || message.includes('roi')) {
+      return 'value_proposal'
+    }
+    return 'idle'
   }
 
   private static isConfirmationMessage(message: string): boolean {
@@ -154,12 +249,43 @@ export class NaturalConversationEngine {
     return editKeywords.some(keyword => message.includes(keyword))
   }
 
-  private static handleConfirmation(state: NaturalConversationState): NaturalResponse {
-    return {
-      message: "¡Perfecto! Con toda esta información puedo prepararte una propuesta personalizada. ¿Te gustaría que agende una consulta gratuita para discutir los detalles y darte una cotización formal?",
-      nextStep: null,
-      shouldAskForConfirmation: true,
-      suggestedActions: ['Agendar consulta', 'Ver cotización preliminar', 'Más información']
+  private static handleConfirmation(state: NaturalConversationState, currentStage: ConsultationStage): NaturalResponse {
+    switch (currentStage) {
+      case 'discovery':
+        return {
+          message: "Excelente. Con esta información del problema de negocio, podemos proceder al análisis técnico. ¿Te gustaría que evaluemos la arquitectura y tecnologías más apropiadas para tu proyecto?",
+          nextStep: null,
+          shouldAskForConfirmation: false,
+          suggestedActions: ['Análisis técnico', 'Evaluar arquitectura', 'Ver tecnologías recomendadas']
+        }
+      case 'technical_analysis':
+        return {
+          message: "Perfecto. Con el análisis técnico completo, puedo prepararte una propuesta de valor específica. ¿Te gustaría que calculemos el ROI potencial y el roadmap de implementación?",
+          nextStep: null,
+          shouldAskForConfirmation: false,
+          suggestedActions: ['Calcular ROI', 'Ver roadmap', 'Propuesta de valor']
+        }
+      case 'value_proposal':
+        return {
+          message: "¡Excelente! Con toda esta información puedo prepararte una propuesta técnica detallada. Te sugiero agendar una consulta donde podamos discutir la arquitectura, timeline y ROI específico de tu proyecto. [AUTO_OPEN_CONSULTATION]",
+          nextStep: null,
+          shouldAskForConfirmation: true,
+          suggestedActions: ['Agendar consulta técnica', 'Ver propuesta preliminar', 'Más detalles']
+        }
+      case 'agendado':
+        return {
+          message: "¡Consulta agendada exitosamente! Te contactaré pronto para avanzar con tu proyecto.",
+          nextStep: null,
+          shouldAskForConfirmation: false,
+          suggestedActions: []
+        }
+      default:
+        return {
+          message: "¡Perfecto! Con toda esta información puedo prepararte una propuesta personalizada. ¿Te gustaría que agende una consulta gratuita para discutir los detalles y darte una cotización formal?",
+          nextStep: null,
+          shouldAskForConfirmation: true,
+          suggestedActions: ['Agendar consulta', 'Ver cotización preliminar', 'Más información']
+        }
     }
   }
 
@@ -270,12 +396,33 @@ export class NaturalConversationEngine {
     nextStep: keyof ConversationData | null,
     currentStep: keyof ConversationData | null,
     intent: ConversationIntent,
-    extractedData: Partial<ConversationData>
+    extractedData: Partial<ConversationData>,
+    personality?: ClientPersonality | null,
+    serviceContext?: ServiceContext | null,
+    memory?: ConversationMemory
   ): NaturalResponse {
     // Si se extrajo información exitosamente
     if (Object.keys(extractedData).length > 0) {
       const field = Object.keys(extractedData)[0] as keyof ConversationData
       const fieldLabel = this.getFieldLabel(field)
+      
+      // Usar respuesta personalizada si está disponible
+      if (personality && serviceContext && memory) {
+        const personalizedMessage = this.generatePersonalizedResponse(
+          intent,
+          personality,
+          serviceContext,
+          memory,
+          collectedData
+        )
+        
+        return {
+          message: `${personalizedMessage} ${this.getNextQuestion(nextStep)}`,
+          nextStep,
+          shouldAskForConfirmation: false,
+          context: `Información ${fieldLabel} registrada con personalización`
+        }
+      }
       
       return {
         message: `¡Perfecto! He registrado tu ${fieldLabel}. ${this.getNextQuestion(nextStep)}`,
@@ -287,6 +434,23 @@ export class NaturalConversationEngine {
     
     // Si no se extrajo información pero hay un paso actual
     if (currentStep && !extractedData[currentStep]) {
+      // Usar pregunta personalizada si está disponible
+      if (personality && serviceContext && memory) {
+        const personalizedQuestion = this.generatePersonalizedFollowUpQuestion(
+          currentStep,
+          personality,
+          serviceContext,
+          memory,
+          collectedData
+        )
+        
+        return {
+          message: personalizedQuestion,
+          nextStep: currentStep,
+          shouldAskForConfirmation: false
+        }
+      }
+      
       return {
         message: this.getRandomQuestion(currentStep),
         nextStep: currentStep,
@@ -296,6 +460,24 @@ export class NaturalConversationEngine {
     
     // Si no hay paso actual, determinar el siguiente
     if (!nextStep) {
+      // Usar respuesta personalizada para confirmación
+      if (personality && serviceContext && memory) {
+        const personalizedMessage = this.generatePersonalizedResponse(
+          intent,
+          personality,
+          serviceContext,
+          memory,
+          collectedData
+        )
+        
+        return {
+          message: personalizedMessage,
+          nextStep: null,
+          shouldAskForConfirmation: true,
+          suggestedActions: ['Ver cotización', 'Agendar consulta', 'Más detalles']
+        }
+      }
+      
       return {
         message: "¡Excelente! Tengo toda la información que necesito. ¿Te gustaría que proceda a preparar una cotización personalizada?",
         nextStep: null,
@@ -304,7 +486,23 @@ export class NaturalConversationEngine {
       }
     }
     
-    // Pregunta por el siguiente campo
+    // Pregunta por el siguiente campo con personalización
+    if (personality && serviceContext && memory) {
+      const personalizedQuestion = this.generatePersonalizedFollowUpQuestion(
+        nextStep,
+        personality,
+        serviceContext,
+        memory,
+        collectedData
+      )
+      
+      return {
+        message: personalizedQuestion,
+        nextStep,
+        shouldAskForConfirmation: false
+      }
+    }
+    
     return {
       message: this.getRandomQuestion(nextStep),
       nextStep,
@@ -435,5 +633,223 @@ export class NaturalConversationEngine {
     }
 
     return responses[intent.type] || "¡Gracias por contactarme! ¿En qué puedo ayudarte?"
+  }
+
+  private static shouldUseAI(
+    intent: ConversationIntent,
+    extractedData: Partial<ConversationData>,
+    nextStep: keyof ConversationData | null
+  ): boolean {
+    // Si hay un nextStep definido, el motor natural puede manejar la recolección de datos
+    if (nextStep) {
+      return false
+    }
+    
+    // Si se extrajo información, el motor natural puede procesarla
+    if (Object.keys(extractedData).length > 0) {
+      return false
+    }
+    
+    // Para intenciones complejas o consultivas, usar AI SDK
+    if (intent.type === 'project_inquiry' || intent.type === 'consultation_request') {
+      return true
+    }
+    
+    // Para recolección de datos simples, usar motor natural
+    return false
+  }
+
+  private static processDiscoveryStage(
+    message: string,
+    state: NaturalConversationState,
+    intent: ConversationIntent,
+    personality?: ClientPersonality | null,
+    serviceContext?: ServiceContext | null,
+    memory?: ConversationMemory
+  ): NaturalResponse {
+    // Extraer información del problema de negocio
+    const extractedData = this.extractBusinessProblem(message)
+    
+    // Determinar qué aspecto del descubrimiento abordar
+    const discoveryAspect = this.determineDiscoveryAspect(state, message)
+    
+    // Generar pregunta consultiva específica
+    const question = this.getConsultativeQuestion('discovery', discoveryAspect)
+    
+    return {
+      message: question,
+      nextStep: null,
+      shouldAskForConfirmation: false,
+      extractedData,
+      shouldUseAI: false,
+      context: 'discovery'
+    }
+  }
+
+  private static processTechnicalAnalysisStage(
+    message: string,
+    state: NaturalConversationState,
+    intent: ConversationIntent,
+    personality?: ClientPersonality | null,
+    serviceContext?: ServiceContext | null,
+    memory?: ConversationMemory
+  ): NaturalResponse {
+    // Extraer información técnica
+    const extractedData = this.extractTechnicalInfo(message)
+    
+    // Determinar aspecto técnico a analizar
+    const technicalAspect = this.determineTechnicalAspect(state, message)
+    
+    // Generar pregunta técnica específica
+    const question = this.getConsultativeQuestion('technical_analysis', technicalAspect)
+    
+    return {
+      message: question,
+      nextStep: null,
+      shouldAskForConfirmation: false,
+      extractedData,
+      shouldUseAI: false,
+      context: 'technical_analysis'
+    }
+  }
+
+  private static processValueProposalStage(
+    message: string,
+    state: NaturalConversationState,
+    intent: ConversationIntent,
+    personality?: ClientPersonality | null,
+    serviceContext?: ServiceContext | null,
+    memory?: ConversationMemory
+  ): NaturalResponse {
+    // Extraer información de valor
+    const extractedData = this.extractValueInfo(message)
+    
+    // Determinar aspecto de valor a abordar
+    const valueAspect = this.determineValueAspect(state, message)
+    
+    // Generar pregunta de valor específica
+    const question = this.getConsultativeQuestion('value_proposal', valueAspect)
+    
+    return {
+      message: question,
+      nextStep: null,
+      shouldAskForConfirmation: false,
+      extractedData,
+      shouldUseAI: false,
+      context: 'value_proposal'
+    }
+  }
+
+  private static processInitialStage(
+    message: string,
+    state: NaturalConversationState,
+    intent: ConversationIntent,
+    personality?: ClientPersonality | null,
+    serviceContext?: ServiceContext | null,
+    memory?: ConversationMemory
+  ): NaturalResponse {
+    // Extraer información básica del mensaje
+    const extractedData = this.extractInformationFromMessage(message, state.currentStep)
+    
+    // Actualizar datos recopilados
+    const updatedData = { ...state.collectedData, ...extractedData }
+    
+    // Determinar el siguiente paso
+    const nextStep = this.determineNextStep(updatedData, state.requiredFields)
+    
+    // Generar respuesta natural con personalización
+    const response = this.generateNaturalResponse(
+      message,
+      updatedData,
+      nextStep,
+      state.currentStep,
+      intent,
+      extractedData,
+      personality,
+      serviceContext,
+      memory
+    )
+    
+    return {
+      ...response,
+      extractedData,
+      shouldUseAI: this.shouldUseAI(intent, extractedData, nextStep)
+    }
+  }
+
+  private static determineDiscoveryAspect(state: NaturalConversationState, message: string): string {
+    const lowerMessage = message.toLowerCase()
+    
+    if (!state.businessProblem || lowerMessage.includes('problema') || lowerMessage.includes('desafío')) {
+      return 'business_problem'
+    }
+    
+    if (!state.kpis.length || lowerMessage.includes('kpi') || lowerMessage.includes('métrica')) {
+      return 'kpis'
+    }
+    
+    if (!state.competitiveContext || lowerMessage.includes('competencia') || lowerMessage.includes('competidor')) {
+      return 'competitive_context'
+    }
+    
+    return 'current_state'
+  }
+
+  private static determineTechnicalAspect(state: NaturalConversationState, message: string): string {
+    const lowerMessage = message.toLowerCase()
+    
+    if (lowerMessage.includes('arquitectura') || lowerMessage.includes('estructura')) {
+      return 'architecture'
+    }
+    
+    if (lowerMessage.includes('integración') || lowerMessage.includes('api')) {
+      return 'integration'
+    }
+    
+    if (lowerMessage.includes('seguridad') || lowerMessage.includes('seguro')) {
+      return 'security'
+    }
+    
+    return 'performance'
+  }
+
+  private static determineValueAspect(state: NaturalConversationState, message: string): string {
+    const lowerMessage = message.toLowerCase()
+    
+    if (lowerMessage.includes('roi') || lowerMessage.includes('retorno')) {
+      return 'roi'
+    }
+    
+    if (lowerMessage.includes('timeline') || lowerMessage.includes('tiempo')) {
+      return 'timeline'
+    }
+    
+    return 'resources'
+  }
+
+  private static getConsultativeQuestion(stage: string, aspect: string): string {
+    const questions = this.CONSULTATIVE_QUESTIONS[stage as keyof typeof this.CONSULTATIVE_QUESTIONS]
+    const aspectQuestions = questions[aspect as keyof typeof questions] as string[]
+    
+    if (aspectQuestions && aspectQuestions.length > 0) {
+      return aspectQuestions[Math.floor(Math.random() * aspectQuestions.length)]
+    }
+    
+    return "¿Podrías contarme más sobre tu proyecto?"
+  }
+
+  private static extractBusinessProblem(message: string): Partial<ConversationData> {
+    // Implementar extracción de problema de negocio
+    return {}
+  }
+
+  private static extractTechnicalInfo(message: string): Partial<ConversationData> {
+    // Implementar extracción de información técnica
+    return {}
+  }
+
+  private static extractValueInfo(message: string): Partial<ConversationData> {
+    // Implementar extracción de información de valor
+    return {}
   }
 } 

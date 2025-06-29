@@ -1,32 +1,28 @@
-import React, { useReducer, useCallback, useContext, createContext/*, useEffect*/ } from 'react'
+import React, { useReducer, useCallback, useContext, createContext, useRef } from 'react'
 import { useChat } from 'ai/react'
-import { 
-  /*ChatbotState, 
-  ChatbotAction,*/ 
-  ChatbotContextType, 
-  ChatMessage, 
-  ConversationData,
-  MessageAnalysis,
-  ConversationIntent,
-  ConversationFlow,
-  MissingInfoTracker,
-  FollowUpQuestion,
-  ResponseTone,
-  ConversationMemory
-} from './types'
-import { unifiedChatbotReducer, unifiedInitialState, UnifiedChatbotAction } from './chatbot-reducer'
-import { ConversationEngine } from './conversation-engine'
-import { 
-  processMessage, 
-  validateNLPResult/*, 
-  type NLPResult, 
-  type Entity, 
-  type Intent, 
-  type Sentiment, 
-  type InformationCompleteness */
-} from '../lib/nlp-processor'
 import { usePersonalization } from './use-personalization'
-import { NaturalConversationEngine } from './natural-conversation-engine'
+import { unifiedChatbotReducer, unifiedInitialState } from './chatbot-reducer'
+import { ConversationData, ConversationIntent, ChatMessage, UnifiedChatbotState } from './types'
+//import { NaturalConversationEngine } from './natural-conversation-engine'
+
+// Tipo para el contexto del chatbot
+export interface ChatbotContextType {
+  state: UnifiedChatbotState
+  input: string
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  openChat: () => void
+  closeChat: () => void
+  clearMessages: () => void
+  updateConversationData: (data: Partial<ConversationData>) => void
+  setCurrentIntent: (intent: ConversationIntent) => void
+  updateNaturalConversation: (data: Partial<UnifiedChatbotState['naturalConversation']>) => void
+  setModalState: (modal: keyof UnifiedChatbotState['modals'], isOpen: boolean) => void
+  setConfirmationState: (data: Partial<UnifiedChatbotState['confirmation']>) => void
+  showConsultationModal: () => void
+  hideConsultationModal: () => void
+  reload: () => void
+}
 
 // Crear el contexto del chatbot
 const ChatbotContext = createContext<ChatbotContextType | undefined>(undefined)
@@ -62,12 +58,30 @@ export const useChatbotLogic = () => {
     }
   }
 
+  // Construir contexto dinámico para el AI SDK
+  const buildChatContext = () => {
+    const collected = state.conversationData || {}
+    const requiredFields = ['name', 'email', 'projectType', 'requirements', 'budget', 'timeline']
+    const missingFields = requiredFields.filter(f => !(collected as any)[f])
+    const etapa = state.naturalConversation?.consultationStage || 'descubrimiento'
+    let contexto = `DATOS RECOLECTADOS:\n`;
+    Object.entries(collected).forEach(([k, v]) => {
+      if (v) contexto += `- ${k}: ${v}\n`;
+    })
+    contexto += `CAMPOS FALTANTES:\n`;
+    missingFields.forEach(f => {
+      contexto += `- ${f}\n`;
+    })
+    contexto += `ETAPA ACTUAL: ${etapa}`;
+    return contexto;
+  }
+
   // Usar el hook useChat del AI SDK
   const { 
     messages: aiMessages, 
     input, 
     handleInputChange, 
-    handleSubmit, 
+    handleSubmit: originalHandleSubmit, 
     reload 
   } = useChat({
     api: "/api/chat",
@@ -94,16 +108,26 @@ export const useChatbotLogic = () => {
         })
       }
 
-      // Abrir modal automáticamente si se detecta la señal
-      if (analysis.autoOpenConsultation) {
+      // REACTIVADO: Abrir modal automáticamente si se detecta la señal
+      if (analysis.autoOpenConsultation || message.content.includes('[AUTO_OPEN_CONSULTATION]')) {
         setTimeout(() => {
           dispatch({ type: 'SET_MODAL_STATE', payload: { modal: 'showConsultationModal', isOpen: true } })
         }, 1000)
       }
-    }
+    },
+    // Enviar contexto dinámico en cada request
+    body: { context: buildChatContext() }
   })
 
-  // Sincronizar los mensajes del AI SDK con el estado unificado
+  // Sobrescribir handleSubmit para actualizar el contexto antes de cada request
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    // Actualizar el contexto antes de enviar el mensaje
+    // (El hook useChat ya enviará el contexto en body)
+    originalHandleSubmit(e)
+  }
+
+  // Sincronizar los mensajes del AI SDK con el estado unificado - CORREGIDO: Evitar bucle infinito
+  const lastAiMessagesRef = useRef<any[]>([])
   React.useEffect(() => {
     const areMessagesEqual = (a: any[], b: any[]) => {
       if (a.length !== b.length) return false;
@@ -116,28 +140,60 @@ export const useChatbotLogic = () => {
     const validRoles = ['assistant', 'system', 'user'];
     const filteredAiMessages = aiMessages.filter((msg: any) => validRoles.includes(msg.role)) as ChatMessage[];
     
-    if (filteredAiMessages.length > 0 && !areMessagesEqual(filteredAiMessages, state.messages)) {
+    // Solo actualizar si los mensajes realmente cambiaron y son diferentes a los últimos procesados
+    if (
+      filteredAiMessages.length > 0 && 
+      !areMessagesEqual(filteredAiMessages, lastAiMessagesRef.current) &&
+      !areMessagesEqual(filteredAiMessages, state.messages)
+    ) {
       dispatch({ type: 'SET_MESSAGES', payload: filteredAiMessages })
+      lastAiMessagesRef.current = filteredAiMessages
     }
-  }, [aiMessages, state.messages])
+  }, [aiMessages]) // Remover state.messages de las dependencias
 
-  // Sincronizar personalización con el estado unificado
+  // Analizar conversación para personalización - SOLO cuando hay mensaje nuevo del usuario y el resultado cambie
+  const lastAnalyzedMessageCount = useRef(0)
+  const lastPersonalizationResult = useRef<any>(null)
   React.useEffect(() => {
-    if (personalization.clientPersonality && personalization.clientPersonality !== state.clientPersonality) {
-      dispatch({ type: 'SET_CLIENT_PERSONALITY', payload: personalization.clientPersonality })
-    }
-    
-    if (personalization.serviceContext && personalization.serviceContext !== state.serviceContext) {
-      dispatch({ type: 'SET_SERVICE_CONTEXT', payload: personalization.serviceContext })
-    }
-  }, [personalization.clientPersonality, personalization.serviceContext, state.clientPersonality, state.serviceContext])
-
-  // Analizar conversación para personalización
-  React.useEffect(() => {
-    if (state.messages.length > 1) {
+    // Solo analizar si hay mensajes nuevos del usuario y no se está analizando ya
+    const userMessages = state.messages.filter(m => m.role === 'user')
+    if (
+      userMessages.length > lastAnalyzedMessageCount.current &&
+      userMessages.length > 0 &&
+      !personalization.isAnalyzing
+    ) {
+      // Guardar el resultado anterior
+      const prevResult = lastPersonalizationResult.current
       personalization.analyzeConversation(state.messages, state.conversationData)
+      lastAnalyzedMessageCount.current = userMessages.length
+      // Guardar el nuevo resultado para comparación futura
+      lastPersonalizationResult.current = {
+        clientPersonality: personalization.clientPersonality,
+        serviceContext: personalization.serviceContext
+      }
     }
-  }, [state.messages, state.conversationData, personalization])
+  }, [state.messages.length, personalization.isAnalyzing])
+
+  // Sincronizar personalización con el estado unificado (con comparación profunda y useRef)
+  const lastPersonalityRef = React.useRef<any>(null)
+  const lastServiceContextRef = React.useRef<any>(null)
+  React.useEffect(() => {
+    const isEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b)
+    if (
+      personalization.clientPersonality &&
+      !isEqual(personalization.clientPersonality, lastPersonalityRef.current)
+    ) {
+      dispatch({ type: 'SET_CLIENT_PERSONALITY', payload: personalization.clientPersonality })
+      lastPersonalityRef.current = personalization.clientPersonality
+    }
+    if (
+      personalization.serviceContext &&
+      !isEqual(personalization.serviceContext, lastServiceContextRef.current)
+    ) {
+      dispatch({ type: 'SET_SERVICE_CONTEXT', payload: personalization.serviceContext })
+      lastServiceContextRef.current = personalization.serviceContext
+    }
+  }, [personalization.clientPersonality, personalization.serviceContext])
 
   // Acciones del chatbot
   const openChat = useCallback(() => {
@@ -150,9 +206,13 @@ export const useChatbotLogic = () => {
 
   const clearMessages = useCallback(() => {
     dispatch({ type: 'CLEAR_CHAT' })
+    // Reiniciar datos recolectados y etapa
+    dispatch({ type: 'UPDATE_CONVERSATION_DATA', payload: {} })
+    dispatch({ type: 'UPDATE_NATURAL_CONVERSATION', payload: { consultationStage: 'idle', collectedData: {} } })
   }, [])
 
   const updateConversationData = useCallback((data: Partial<ConversationData>) => {
+    console.log('[Chatbot] Datos extraídos y guardados en collectedData:', data)
     dispatch({ type: 'UPDATE_CONVERSATION_DATA', payload: data })
   }, [])
 
@@ -277,14 +337,11 @@ export const useChatbotLogic = () => {
   }
 }
 
-// Exportar el hook principal
-export const useChatbot = useChatbotLogic
-
 // Hook para usar el contexto del chatbot
-export const useChatbotContext = () => {
+export const useChatbot = () => {
   const context = useContext(ChatbotContext)
   if (context === undefined) {
-    throw new Error('useChatbotContext debe ser usado dentro de un ChatbotProvider')
+    throw new Error('useChatbot debe ser usado dentro de un ChatbotProvider')
   }
   return context
 }

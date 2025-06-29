@@ -33,38 +33,44 @@ export class PersonalizedResponseEngine {
     executive: {
       tone: 'formal' as const,
       detailLevel: 'low' as const,
-      focusAreas: ['roi', 'timeline', 'business_impact'],
-      language: ['estrategia', 'resultados', 'impacto', 'negocio']
+      focusAreas: ['roi', 'timeline', 'business_impact', 'strategic_value'],
+      language: ['estrategia', 'resultados', 'impacto', 'negocio', 'kpi', 'roi'],
+      consultativeApproach: 'business_impact'
     },
     entrepreneur: {
       tone: 'enthusiastic' as const,
       detailLevel: 'medium' as const,
-      focusAreas: ['growth', 'scalability', 'market_opportunity'],
-      language: ['crecer', 'escalar', 'oportunidad', 'innovación']
+      focusAreas: ['growth', 'scalability', 'market_opportunity', 'competitive_advantage'],
+      language: ['crecer', 'escalar', 'oportunidad', 'innovación', 'mercado', 'competencia'],
+      consultativeApproach: 'growth_opportunity'
     },
     developer: {
       tone: 'technical' as const,
       detailLevel: 'high' as const,
-      focusAreas: ['architecture', 'performance', 'best_practices'],
-      language: ['arquitectura', 'performance', 'escalabilidad', 'código']
+      focusAreas: ['architecture', 'performance', 'best_practices', 'technical_excellence'],
+      language: ['arquitectura', 'performance', 'escalabilidad', 'código', 'tecnología', 'stack'],
+      consultativeApproach: 'technical_excellence'
     },
     marketer: {
       tone: 'casual' as const,
       detailLevel: 'medium' as const,
-      focusAreas: ['conversion', 'user_experience', 'branding'],
-      language: ['conversión', 'experiencia', 'marca', 'audiencia']
+      focusAreas: ['conversion', 'user_experience', 'branding', 'customer_journey'],
+      language: ['conversión', 'experiencia', 'marca', 'audiencia', 'engagement', 'leads'],
+      consultativeApproach: 'conversion_optimization'
     },
     consultant: {
       tone: 'formal' as const,
       detailLevel: 'high' as const,
-      focusAreas: ['strategy', 'process', 'recommendations'],
-      language: ['estrategia', 'proceso', 'recomendación', 'experiencia']
+      focusAreas: ['strategy', 'process', 'recommendations', 'best_practices'],
+      language: ['estrategia', 'proceso', 'recomendación', 'experiencia', 'metodología'],
+      consultativeApproach: 'strategic_consulting'
     },
     general: {
       tone: 'casual' as const,
       detailLevel: 'medium' as const,
-      focusAreas: ['value', 'quality', 'service'],
-      language: ['valor', 'calidad', 'servicio', 'solución']
+      focusAreas: ['value', 'quality', 'service', 'solutions'],
+      language: ['valor', 'calidad', 'servicio', 'solución', 'beneficio'],
+      consultativeApproach: 'value_proposition'
     }
   }
 
@@ -152,28 +158,36 @@ export class PersonalizedResponseEngine {
   ): string {
     const templates = {
       greeting: {
-        executive: "Buenos días. Soy el asistente de Gabriel Bustos. ¿En qué puedo ayudarle con su proyecto?",
-        entrepreneur: "¡Hola! Soy el asistente de Gabriel Bustos. ¿Qué proyecto tienes en mente para hacer crecer tu negocio?",
-        developer: "¡Hola! Soy el asistente de Gabriel Bustos. ¿En qué puedo ayudarte con el desarrollo de tu proyecto?",
-        marketer: "¡Hola! Soy el asistente de Gabriel Bustos. ¿Qué campaña o estrategia digital tienes en mente?",
-        consultant: "Buenos días. Soy el asistente de Gabriel Bustos. ¿En qué proyecto puedo ayudarte?",
-        general: "¡Hola! Soy el asistente de Gabriel Bustos. ¿En qué puedo ayudarte hoy?"
+        executive: "Buenos días. Soy Gabriel Bustos, consultor senior en desarrollo web. ¿Qué desafío de negocio está enfrentando que podamos resolver con tecnología?",
+        entrepreneur: "¡Hola! Soy Gabriel Bustos, especialista en soluciones digitales para startups. ¿Qué oportunidad de mercado quieres aprovechar con tu proyecto?",
+        developer: "¡Hola! Soy Gabriel Bustos, arquitecto de soluciones web. ¿Qué desafío técnico necesitas resolver en tu proyecto?",
+        marketer: "¡Hola! Soy Gabriel Bustos, especialista en experiencias digitales que convierten. ¿Qué objetivo de conversión quieres alcanzar?",
+        consultant: "Buenos días. Soy Gabriel Bustos, consultor en transformación digital. ¿Para qué cliente o proyecto necesitas esta solución?",
+        general: "¡Hola! Soy Gabriel Bustos, consultor en desarrollo web. ¿Qué problema de negocio quieres resolver con tecnología?"
       },
       project_inquiry: {
-        executive: "Entiendo su interés en el proyecto. Para brindarle la mejor propuesta, necesito algunos detalles estratégicos.",
-        entrepreneur: "¡Genial! Cuéntame más sobre tu proyecto. ¿Qué problema quieres resolver o qué oportunidad quieres aprovechar?",
-        developer: "Perfecto. ¿Qué tipo de desarrollo necesitas? ¿Tienes algún stack tecnológico en mente?",
-        marketer: "¡Excelente! ¿Qué objetivo de marketing quieres alcanzar con este proyecto?",
-        consultant: "Entiendo. ¿Para qué cliente o proyecto específico necesitas esta solución?",
-        general: "¡Perfecto! Cuéntame más sobre tu proyecto. ¿Qué tienes en mente?"
+        executive: "Entiendo su interés en el proyecto. Para brindarle la mejor propuesta estratégica, necesito analizar el impacto de negocio y los KPIs que quiere mejorar.",
+        entrepreneur: "¡Genial! Cuéntame más sobre tu proyecto. ¿Qué problema de mercado quieres resolver o qué ventaja competitiva quieres desarrollar?",
+        developer: "Perfecto. ¿Qué tipo de desarrollo necesitas? ¿Tienes algún stack tecnológico en mente o prefieres que analicemos las mejores opciones?",
+        marketer: "¡Excelente! ¿Qué objetivo de marketing quieres alcanzar con este proyecto? ¿Qué métricas de conversión necesitas mejorar?",
+        consultant: "Entiendo. ¿Para qué cliente o proyecto específico necesitas esta solución? ¿Qué tipo de asesoría técnica requieren?",
+        general: "¡Perfecto! Cuéntame más sobre tu proyecto. ¿Qué problema de negocio quieres resolver o qué oportunidad quieres aprovechar?"
       },
       budget_discussion: {
-        executive: "Entiendo su preocupación por el presupuesto. Le ayudo a evaluar el ROI de la inversión.",
-        entrepreneur: "El presupuesto es clave para startups. Te ayudo a encontrar la mejor relación costo-beneficio.",
-        developer: "El presupuesto varía según la complejidad técnica. ¿Qué funcionalidades específicas necesitas?",
-        marketer: "El presupuesto debe alinearse con tus objetivos de conversión. ¿Qué métricas quieres mejorar?",
-        consultant: "El presupuesto depende del alcance del proyecto. ¿Qué servicios específicos necesitas?",
-        general: "El presupuesto varía según el proyecto. ¿Podrías contarme más sobre lo que necesitas?"
+        executive: "Entiendo su preocupación por el presupuesto. Le ayudo a evaluar el ROI de la inversión y el impacto estratégico en su negocio.",
+        entrepreneur: "El presupuesto es clave para startups. Te ayudo a encontrar la mejor relación costo-beneficio y optimizar la inversión para el crecimiento.",
+        developer: "El presupuesto varía según la complejidad técnica y escalabilidad requerida. ¿Qué funcionalidades específicas necesitas y cómo planeas escalar?",
+        marketer: "El presupuesto debe alinearse con tus objetivos de conversión y ROI de marketing. ¿Qué métricas quieres mejorar y cuál es el valor de cada conversión?",
+        consultant: "El presupuesto depende del alcance del proyecto y la complejidad técnica. ¿Qué servicios específicos necesitas y para qué tipo de cliente?",
+        general: "El presupuesto varía según el valor de negocio del proyecto. ¿Podrías contarme más sobre el problema que quieres resolver y su impacto en tu negocio?"
+      },
+      technical_question: {
+        executive: "Desde una perspectiva estratégica, la tecnología debe alinearse con sus objetivos de negocio. ¿Qué resultado específico necesita lograr?",
+        entrepreneur: "La tecnología debe ser escalable y adaptable a tu crecimiento. ¿Cómo planeas que evolucione tu negocio en los próximos meses?",
+        developer: "La arquitectura técnica debe ser robusta y mantenible. ¿Qué requisitos de performance y escalabilidad tienes en mente?",
+        marketer: "La tecnología debe optimizar la experiencia del usuario y las conversiones. ¿Qué tipo de interacciones quieres facilitar?",
+        consultant: "La solución técnica debe ser flexible y reutilizable. ¿Qué tipo de proyectos similares has manejado antes?",
+        general: "La tecnología debe resolver tu problema de manera eficiente. ¿Qué funcionalidades específicas necesitas para lograr tu objetivo?"
       }
     }
 
@@ -182,7 +196,7 @@ export class PersonalizedResponseEngine {
       return intentTemplates[personality.type] || intentTemplates.general
     }
 
-    return "¡Gracias por contactarme! ¿En qué puedo ayudarte?"
+    return "¡Gracias por contactarme! ¿En qué puedo ayudarte a resolver tu desafío de negocio?"
   }
 
   private static adaptMessageForPersonality(

@@ -1,19 +1,19 @@
 "use client"
 
-import React, { ReactNode } from "react"
-import ChatBot from "./Chatbot"
-import { useChatbotLogic, ChatbotContext } from "../hooks/use-chatbot"
-import { FollowUpQuestion } from "../hooks/types"
+import React from 'react'
+import ChatBot from './Chatbot'
+import { useChatbotLogic, ChatbotContext, ChatbotContextType } from '../hooks/use-chatbot-unified'
+import { FollowUpQuestion } from '../hooks/types'
 
 interface ChatBotProviderProps {
-  children: ReactNode
+  children: React.ReactNode
 }
 
 export default function ChatBotProvider({ children }: ChatBotProviderProps) {
   const chatbotLogic = useChatbotLogic()
 
   return (
-    <ChatbotContext.Provider value={chatbotLogic}>
+    <ChatbotContext.Provider value={chatbotLogic as ChatbotContextType}>
       {children}
       <ChatBot 
         isOpen={chatbotLogic.state.isOpen} 

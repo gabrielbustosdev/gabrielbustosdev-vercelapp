@@ -1,49 +1,44 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { ConversationData } from '@/hooks/types'
 
 interface InformationSummaryProps {
   collectedData: Partial<ConversationData>
-  onEdit?: (field: keyof ConversationData) => void
+  onConfirm: (data: Partial<ConversationData>) => void
   isEditable?: boolean
 }
 
-const FIELD_LABELS: Record<keyof ConversationData, string> = {
-  name: 'Nombre',
-  email: 'Email',
-  phone: 'Teléfono',
-  projectType: 'Tipo de proyecto',
-  requirements: 'Requerimientos',
-  budget: 'Presupuesto',
-  timeline: 'Timeline',
-  companyName: 'Empresa',
-  location: 'Ubicación',
-  clientName: 'Nombre del cliente',
-  clientEmail: 'Email del cliente',
-  clientPhone: 'Teléfono del cliente'
-}
-
-const FIELD_ICONS: Record<keyof ConversationData, string> = {
-  name: '👤',
-  email: '📧',
-  phone: '📞',
-  projectType: '💼',
-  requirements: '📋',
-  budget: '💰',
-  timeline: '⏰',
-  companyName: '🏢',
-  location: '📍',
-  clientName: '👥',
-  clientEmail: '📨',
-  clientPhone: '📱'
-}
+const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validateName = (name: string) => name && name.length > 1;
 
 export const InformationSummary: React.FC<InformationSummaryProps> = ({
   collectedData,
-  onEdit,
-  isEditable = false
+  onConfirm,
+  isEditable = true,
 }) => {
+  const [data, setData] = useState(collectedData);
+  const [errors, setErrors] = useState<{ [k in keyof ConversationData]?: string }>({});
+
+  const handleChange = (field: keyof ConversationData, value: string) => {
+    setData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const handleValidate = () => {
+    const newErrors: { [k in keyof ConversationData]?: string } = {};
+    if (!validateName(data.name || '')) newErrors.name = 'Nombre inválido';
+    if (!validateEmail(data.email || '')) newErrors.email = 'Email inválido';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleConfirm = () => {
+    if (handleValidate()) {
+      onConfirm(data);
+    }
+  };
+
   const filledFields = Object.entries(collectedData).filter(([, value]) => 
     value && String(value).trim().length > 0
   )
@@ -59,66 +54,43 @@ export const InformationSummary: React.FC<InformationSummaryProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-700">
-          Resumen de información
-        </h3>
-        <span className="text-xs text-gray-500">
-          {filledFields.length} campos completados
-        </span>
-      </div>
-      
-      <div className="space-y-3">
-        {filledFields.map(([field, value]) => {
-          const fieldKey = field as keyof ConversationData
-          const displayValue = String(value).length > 50 
-            ? `${String(value).substring(0, 50)}...` 
-            : String(value)
-          
-          return (
-            <div 
-              key={field}
-              className="flex items-start space-x-3 p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors duration-200"
-            >
-              <span className="text-lg flex-shrink-0">
-                {FIELD_ICONS[fieldKey]}
-              </span>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">
-                    {FIELD_LABELS[fieldKey]}
-                  </span>
-                  {isEditable && onEdit && (
-                    <button
-                      onClick={() => onEdit(fieldKey)}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Editar
-                    </button>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 mt-1 break-words">
-                  {displayValue}
-                </p>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-      
-      {/* Acciones */}
-      {isEditable && onEdit && (
-        <div className="mt-4 pt-3 border-t border-gray-200">
-          <button
-            onClick={() => onEdit('name')} // Campo por defecto para editar
-            className="w-full px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors duration-200"
-          >
-            ✏️ Editar información
-          </button>
+    <div className="p-4 bg-slate-800 rounded-xl border border-slate-700 max-w-md mx-auto mt-4">
+      <h3 className="text-lg font-semibold text-white mb-2">Resumen de datos para agendar consulta</h3>
+      <div className="space-y-2">
+        <div>
+          <label className="block text-sm text-gray-300">Nombre</label>
+          <input
+            className="w-full px-3 py-2 rounded bg-slate-900 text-white border border-slate-600 focus:outline-none"
+            value={data.name || ''}
+            onChange={(e) => handleChange('name', e.target.value)}
+            disabled={!isEditable}
+          />
+          {errors.name && <span className="text-xs text-red-400">{errors.name}</span>}
         </div>
-      )}
+        <div>
+          <label className="block text-sm text-gray-300">Email</label>
+          <input
+            className="w-full px-3 py-2 rounded bg-slate-900 text-white border border-slate-600 focus:outline-none"
+            value={data.email || ''}
+            onChange={(e) => handleChange('email', e.target.value)}
+            disabled={!isEditable}
+          />
+          {errors.email && <span className="text-xs text-red-400">{errors.email}</span>}
+        </div>
+        {/* Puedes agregar más campos aquí si lo deseas */}
+      </div>
+      <div className="flex justify-end mt-4 space-x-2">
+        {isEditable && (
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={handleConfirm}
+          >
+            Confirmar y agendar consulta
+          </button>
+        )}
+      </div>
     </div>
   )
-} 
+}
+
+export default InformationSummary 
