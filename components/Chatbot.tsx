@@ -2,11 +2,16 @@
 
 import type React from "react"
 import { useRef, useEffect, useState } from "react"
-import { Bot, User, Send, Loader2, AlertCircle, Calendar, Shield } from "lucide-react"
+import { Bot, User, Send, Loader2, AlertCircle, Shield } from "lucide-react"
 import ChatConsultationModal from "./ChatConsultationModal"
 import GuardrailsDisplay from "./GuardrailsDisplay"
+import { ConversationProgress } from "./ConversationProgress"
+import { InformationSummary } from "./InformationSummary"
+import { RealTimeValidation } from "./RealTimeValidation"
+import { ConfirmationDialog } from "./ConfirmationDialog"
 import { useChatbot } from "../hooks/use-chatbot"
-import { ConversationIntent, ConversationFlow, MissingInfoTracker, FollowUpQuestion } from "../hooks/types"
+import { ConversationIntent, ConversationFlow, MissingInfoTracker, FollowUpQuestion, ConversationData } from "../hooks/types"
+import { NaturalConversationEngine, NaturalConversationState } from "../hooks/natural-conversation-engine"
 
 interface ChatBotProps {
   isOpen: boolean
@@ -32,20 +37,34 @@ export default function ChatBot({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [showGuardrails, setShowGuardrails] = useState(false)
+  const [showProgress, setShowProgress] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [currentStep, setCurrentStep] = useState<keyof ConversationData | null>(null)
   
   const {
     state,
     input,
     handleInputChange,
     handleSubmit,
-    reload,
     showConsultationModal,
     hideConsultationModal,
-    clearMessages
+    clearMessages,
+    updateConversationData
   } = useChatbot()
 
   const { messages, loading, showConsultationModal: isModalOpen, conversationData } = state
   const { isLoading, error } = loading
+
+  // Estado del motor de conversación natural
+  const [naturalState, setNaturalState] = useState<NaturalConversationState>({
+    currentStep: null,
+    collectedData: {},
+    requiredFields: ['name', 'email', 'projectType', 'requirements'],
+    conversationContext: [],
+    lastUserMessage: '',
+    isWaitingForConfirmation: false
+  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -61,9 +80,68 @@ export default function ChatBot({
     }
   }, [isOpen])
 
+  // Actualizar estado natural cuando cambian los datos de conversación
+  useEffect(() => {
+    setNaturalState(prev => ({
+      ...prev,
+      collectedData: conversationData
+    }))
+  }, [conversationData])
+
+  // Mostrar progreso cuando hay datos recopilados
+  useEffect(() => {
+    setShowProgress(NaturalConversationEngine.shouldShowProgress(naturalState))
+    setShowSummary(Object.keys(naturalState.collectedData).length > 0)
+  }, [naturalState])
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    if (!input.trim()) return
+
+    // Procesar con motor de conversación natural si hay una intención
+    if (currentIntent) {
+      const naturalResponse = NaturalConversationEngine.processUserMessage(
+        input,
+        naturalState,
+        currentIntent
+      )
+
+      // Actualizar estado natural
+      setNaturalState(prev => ({
+        ...prev,
+        currentStep: naturalResponse.nextStep,
+        collectedData: { ...prev.collectedData },
+        lastUserMessage: input,
+        isWaitingForConfirmation: naturalResponse.shouldAskForConfirmation
+      }))
+
+      // Si hay información extraída, actualizar datos de conversación
+      if (naturalResponse.context) {
+        updateConversationData(naturalResponse.context as Partial<ConversationData>)
+      }
+
+      // Mostrar confirmación si es necesario
+      if (naturalResponse.shouldAskForConfirmation) {
+        setShowConfirmation(true)
+      }
+    }
+
     handleSubmit(e)
+  }
+
+  const handleEditField = (field: keyof ConversationData) => {
+    setCurrentStep(field)
+    setShowConfirmation(false)
+    // Enfocar el input para que el usuario pueda editar
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 100)
+  }
+
+  const handleConfirmInformation = () => {
+    setShowConfirmation(false)
+    showConsultationModal()
   }
 
   const formatTime = (date: Date) => {
@@ -153,10 +231,17 @@ export default function ChatBot({
 
   const handleClearChat = () => {
     clearMessages()
-  }
-
-  const handleOpenConsultationModal = () => {
-    showConsultationModal()
+    setNaturalState({
+      currentStep: null,
+      collectedData: {},
+      requiredFields: ['name', 'email', 'projectType', 'requirements'],
+      conversationContext: [],
+      lastUserMessage: '',
+      isWaitingForConfirmation: false
+    })
+    setShowProgress(false)
+    setShowSummary(false)
+    setShowConfirmation(false)
   }
 
   if (!isOpen) {
@@ -202,30 +287,25 @@ export default function ChatBot({
                 )}
               </div>
             </div>
+            
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowGuardrails(!showGuardrails)}
-                className={`p-2 rounded-lg transition-colors duration-200 ${
-                  showGuardrails 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                }`}
-                title="Mostrar/Ocultar Guardrails"
+                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
+                title="Mostrar guardrails"
               >
                 <Shield className="w-5 h-5" />
               </button>
-              
               <button
-                onClick={handleOpenConsultationModal}
-                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/10 rounded-lg transition-colors duration-200"
-                title="Abrir consulta"
+                onClick={handleClearChat}
+                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
+                title="Limpiar chat"
               >
-                <Calendar className="w-5 h-5" />
+                <AlertCircle className="w-5 h-5" />
               </button>
-              
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-200 hover:bg-white/10 rounded-lg transition-colors duration-200"
+                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
                 title="Cerrar chat"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,128 +315,122 @@ export default function ChatBot({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center text-gray-400 py-8">
-                <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">¡Hola! Soy el asistente IA de Gabriel</h3>
-                <p className="text-sm">
-                  Estoy aquí para ayudarte con información sobre nuestros servicios de desarrollo web, 
-                  landing pages, plataformas con inteligencia artificial, rebranding y optimización de sitios web.
-                </p>
-                <div className="mt-6 space-y-2">
-                  <p className="text-xs text-gray-500">Puedes preguntarme sobre:</p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {[
-                      "Servicios de desarrollo web",
-                      "Landing pages",
-                      "Integración de IA",
-                      "Consultoría técnica",
-                      "Procesos de trabajo"
-                    ].map((topic) => (
-                      <span key={topic} className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-xs text-blue-300">
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
+          {/* Panel lateral con información */}
+          <div className="flex flex-1 overflow-hidden">
+            <div className="flex-1 flex flex-col">
+              {/* Área de mensajes */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message) => (
                   <div key={message.id}>
                     {renderMessage(message)}
                   </div>
                 ))}
+                
                 {renderFollowUpQuestions()}
                 {renderConversationFlow()}
-              </>
-            )}
-            
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex items-start space-x-2 max-w-[80%]">
-                  <div className="w-8 h-8 bg-gradient-to-r from-slate-600 to-zinc-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="bg-white/10 text-gray-100 border border-white/10 rounded-2xl px-4 py-3">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">Pensando...</span>
+                
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center space-x-2 bg-white/10 rounded-2xl px-4 py-3">
+                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                      <span className="text-sm text-gray-400">Pensando...</span>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-            
-            {error && (
-              <div className="flex justify-start">
-                <div className="flex items-start space-x-2 max-w-[80%]">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-4 h-4 text-white" />
+                )}
+                
+                {error && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
+                      <AlertCircle className="w-4 h-4 text-red-400" />
+                      <span className="text-sm text-red-400">Error: {error}</span>
+                    </div>
                   </div>
-                  <div className="bg-red-500/10 text-red-300 border border-red-500/20 rounded-2xl px-4 py-3">
-                    <p className="text-sm">Error: {error}</p>
-                  </div>
-                </div>
+                )}
+                
+                <div ref={messagesEndRef} />
               </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
 
-          <div className="p-4 border-t border-white/10">
-            <form onSubmit={onSubmit} className="flex space-x-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={handleInputChange}
-                placeholder="Escribe tu mensaje..."
-                className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-3 rounded-lg transition-colors duration-200"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </form>
-            
-            <div className="flex items-center justify-between mt-3 text-xs text-gray-400">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={handleClearChat}
-                  className="hover:text-gray-200 transition-colors duration-200"
-                >
-                  Limpiar chat
-                </button>
-                <button
-                  onClick={reload}
-                  className="hover:text-gray-200 transition-colors duration-200"
-                >
-                  Recargar
-                </button>
+              {/* Input y validación */}
+              <div className="p-4 border-t border-white/10">
+                <form onSubmit={onSubmit} className="space-y-2">
+                  <div className="relative">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={input}
+                      onChange={handleInputChange}
+                      placeholder={currentStep ? `Ingresa tu ${String(currentStep)}...` : "Escribe tu mensaje..."}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoading || !input.trim()}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors duration-200"
+                    >
+                      <Send className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                  
+                  {/* Validación en tiempo real */}
+                  {currentStep && (
+                    <RealTimeValidation
+                      field={currentStep}
+                      value={input}
+                      onValidationChange={() => {}}
+                    />
+                  )}
+                </form>
               </div>
-              <div className="text-xs">
-                {messages.length} mensajes
+            </div>
+
+            {/* Panel lateral derecho */}
+            <div className="w-80 bg-slate-800/50 border-l border-white/10 p-4 overflow-y-auto">
+              <div className="space-y-4">
+                {/* Progreso de conversación */}
+                {showProgress && (
+                  <ConversationProgress
+                    collectedData={naturalState.collectedData}
+                    requiredFields={naturalState.requiredFields}
+                    currentStep={currentStep || undefined}
+                  />
+                )}
+
+                {/* Resumen de información */}
+                {showSummary && (
+                  <InformationSummary
+                    collectedData={naturalState.collectedData}
+                    onEdit={handleEditField}
+                    isEditable={true}
+                  />
+                )}
+
+                {/* Display de guardrails */}
+                {showGuardrails && <GuardrailsDisplay />}
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Modal de confirmación */}
+      <ConfirmationDialog
+        collectedData={naturalState.collectedData}
+        isOpen={showConfirmation}
+        onConfirm={handleConfirmInformation}
+        onEdit={() => setShowConfirmation(false)}
+        onCancel={() => setShowConfirmation(false)}
+        title="Confirmar información recopilada"
+        confirmText="Agendar consulta"
+        editText="Editar información"
+        cancelText="Cancelar"
+      />
+
+      {/* Modal de consulta */}
       <ChatConsultationModal
         isOpen={isModalOpen}
         onClose={hideConsultationModal}
         conversationData={conversationData}
-      />
-
-      <GuardrailsDisplay
-        isVisible={showGuardrails}
-        onClose={() => setShowGuardrails(false)}
       />
     </>
   )
