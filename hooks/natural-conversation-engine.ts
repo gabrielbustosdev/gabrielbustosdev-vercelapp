@@ -1,4 +1,6 @@
 import { ConversationData, ConversationIntent, IntentType } from './types'
+import { PersonalizedResponseEngine } from './personalized-response-engine'
+import { ClientPersonality, ServiceContext, ConversationMemory } from './types'
 
 export interface NaturalConversationState {
   currentStep: keyof ConversationData | null
@@ -347,5 +349,91 @@ export class NaturalConversationEngine {
     return requiredFields.every(field => 
       state.collectedData[field] && String(state.collectedData[field]).trim().length > 0
     )
+  }
+
+  static generatePersonalizedFollowUpQuestion(
+    currentStep: keyof ConversationData,
+    personality: ClientPersonality | null,
+    serviceContext: ServiceContext | null,
+    memory: ConversationMemory,
+    conversationData: Partial<ConversationData>
+  ): string {
+    if (!personality || !serviceContext) {
+      return this.generateDefaultFollowUpQuestion(currentStep)
+    }
+
+    return PersonalizedResponseEngine.generateFollowUpQuestion(
+      personality,
+      serviceContext,
+      memory,
+      String(currentStep)
+    )
+  }
+
+  static generatePersonalizedResponse(
+    intent: ConversationIntent,
+    personality: ClientPersonality | null,
+    serviceContext: ServiceContext | null,
+    memory: ConversationMemory,
+    conversationData: Partial<ConversationData>
+  ): string {
+    if (!personality || !serviceContext) {
+      return this.generateDefaultResponse(intent)
+    }
+
+    const personalizedResponse = PersonalizedResponseEngine.generatePersonalizedResponse(
+      intent,
+      personality,
+      serviceContext,
+      memory,
+      conversationData
+    )
+
+    return personalizedResponse.message
+  }
+
+  private static generateDefaultFollowUpQuestion(currentStep: keyof ConversationData): string {
+    const questions: Record<keyof ConversationData, string> = {
+      name: "¿Podrías contarme tu nombre completo?",
+      email: "¿Cuál es tu dirección de email?",
+      phone: "¿Podrías compartir tu número de teléfono?",
+      projectType: "¿Qué tipo de proyecto tienes en mente?",
+      requirements: "¿Podrías describir los requerimientos de tu proyecto?",
+      budget: "¿Tienes un presupuesto en mente para este proyecto?",
+      timeline: "¿Cuándo necesitas que esté listo el proyecto?",
+      companyName: "¿Para qué empresa trabajas?",
+      location: "¿En qué ubicación te encuentras?",
+      clientName: "¿Cuál es el nombre del cliente?",
+      clientEmail: "¿Cuál es el email del cliente?",
+      clientPhone: "¿Cuál es el teléfono del cliente?"
+    }
+
+    return questions[currentStep] || "¿Podrías contarme más sobre eso?"
+  }
+
+  private static generateDefaultResponse(intent: ConversationIntent): string {
+    const responses: Record<IntentType, string> = {
+      greeting: "¡Hola! Soy el asistente de Gabriel Bustos. ¿En qué puedo ayudarte hoy?",
+      project_inquiry: "¡Perfecto! Cuéntame más sobre tu proyecto. ¿Qué tienes en mente?",
+      budget_discussion: "El presupuesto varía según el proyecto. ¿Podrías contarme más sobre lo que necesitas?",
+      timeline_discussion: "Entiendo que el tiempo es importante. ¿Cuándo necesitas que esté listo?",
+      service_inquiry: "Ofrezco servicios de desarrollo web, integración de IA, consultoría técnica y más. ¿Qué te interesa?",
+      contact_request: "¡Claro! Puedes contactarme por email o agendar una consulta. ¿Qué prefieres?",
+      portfolio_request: "¡Claro! Puedes ver mi portafolio en la sección de proyectos. ¿Hay algo específico que te interese?",
+      consultation_request: "¡Excelente! Te ayudo a agendar una consulta. Necesito algunos datos primero.",
+      pricing_inquiry: "Los precios varían según el proyecto. ¿Podrías contarme qué necesitas para darte una idea?",
+      technical_question: "¡Me encanta hablar de tecnología! ¿Qué te gustaría saber específicamente?",
+      general_question: "¡Con gusto te ayudo! ¿Qué pregunta tienes?",
+      goodbye: "¡Ha sido un placer! Si necesitas algo más, no dudes en contactarme. ¡Que tengas un excelente día!",
+      clarification_request: "Por supuesto, ¿qué necesitas que te aclare?",
+      confirmation: "¡Perfecto! ¿Hay algo más en lo que pueda ayudarte?",
+      objection: "Entiendo tu preocupación. ¿Podrías contarme más para poder ayudarte mejor?",
+      urgency_indicator: "Entiendo que es urgente. Te ayudo lo más rápido posible. ¿Qué necesitas?",
+      project_quote: "¡Perfecto! Para darte una cotización necesito algunos detalles. ¿Qué tipo de proyecto tienes en mente?",
+      general_information: "¡Con gusto te ayudo! ¿Qué información necesitas sobre mis servicios?",
+      complaint: "Lamento escuchar eso. ¿Podrías contarme más detalles para poder ayudarte?"
+    }
+
+    return responses[intent.type] || "¡Gracias por contactarme! ¿En qué puedo ayudarte?"
   }
 } 

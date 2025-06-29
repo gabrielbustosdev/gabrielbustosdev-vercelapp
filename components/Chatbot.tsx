@@ -2,14 +2,16 @@
 
 import type React from "react"
 import { useRef, useEffect, useState } from "react"
-import { Bot, User, Send, Loader2, AlertCircle, Shield } from "lucide-react"
+import { Bot, User, Send, Loader2, AlertCircle, Shield, Brain } from "lucide-react"
 import ChatConsultationModal from "./ChatConsultationModal"
 import GuardrailsDisplay from "./GuardrailsDisplay"
 import { ConversationProgress } from "./ConversationProgress"
 import { InformationSummary } from "./InformationSummary"
 import { RealTimeValidation } from "./RealTimeValidation"
 import { ConfirmationDialog } from "./ConfirmationDialog"
+import { PersonalizationDisplay } from "./PersonalizationDisplay"
 import { useChatbot } from "../hooks/use-chatbot"
+import { usePersonalization } from "../hooks/use-personalization"
 import { ConversationIntent, ConversationFlow, MissingInfoTracker, FollowUpQuestion, ConversationData } from "../hooks/types"
 import { NaturalConversationEngine, NaturalConversationState } from "../hooks/natural-conversation-engine"
 
@@ -40,6 +42,7 @@ export default function ChatBot({
   const [showProgress, setShowProgress] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
+  const [showPersonalization, setShowPersonalization] = useState(false)
   const [currentStep, setCurrentStep] = useState<keyof ConversationData | null>(null)
   
   const {
@@ -52,6 +55,17 @@ export default function ChatBot({
     clearMessages,
     updateConversationData
   } = useChatbot()
+
+  // Hook de personalización
+  const {
+    clientPersonality,
+    serviceContext,
+    conversationMemory,
+    currentTone,
+    isAnalyzing,
+    analyzeConversation,
+    resetPersonalization
+  } = usePersonalization()
 
   const { messages, loading, showConsultationModal: isModalOpen, conversationData } = state
   const { isLoading, error } = loading
@@ -87,6 +101,13 @@ export default function ChatBot({
       collectedData: conversationData
     }))
   }, [conversationData])
+
+  // Analizar conversación para personalización cuando hay suficientes mensajes
+  useEffect(() => {
+    if (messages.length >= 2 && !isAnalyzing) {
+      analyzeConversation(messages, conversationData)
+    }
+  }, [messages, conversationData, analyzeConversation, isAnalyzing])
 
   // Mostrar progreso cuando hay datos recopilados
   useEffect(() => {
@@ -242,6 +263,7 @@ export default function ChatBot({
     setShowProgress(false)
     setShowSummary(false)
     setShowConfirmation(false)
+    resetPersonalization()
   }
 
   if (!isOpen) {
@@ -285,10 +307,22 @@ export default function ChatBot({
                     Intención: {currentIntent.type} ({Math.round(currentIntent.confidence * 100)}%)
                   </p>
                 )}
+                {clientPersonality && (
+                  <p className="text-xs text-purple-300">
+                    Tono: {currentTone} | Cliente: {clientPersonality.type}
+                  </p>
+                )}
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowPersonalization(!showPersonalization)}
+                className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
+                title="Mostrar personalización"
+              >
+                <Brain className="w-5 h-5" />
+              </button>
               <button
                 onClick={() => setShowGuardrails(!showGuardrails)}
                 className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
@@ -387,6 +421,15 @@ export default function ChatBot({
             {/* Panel lateral derecho */}
             <div className="w-80 bg-slate-800/50 border-l border-white/10 p-4 overflow-y-auto">
               <div className="space-y-4">
+                {/* Display de personalización */}
+                <PersonalizationDisplay
+                  personality={clientPersonality}
+                  serviceContext={serviceContext}
+                  conversationMemory={conversationMemory}
+                  isVisible={showPersonalization}
+                  onToggle={() => setShowPersonalization(!showPersonalization)}
+                />
+
                 {/* Progreso de conversación */}
                 {showProgress && (
                   <ConversationProgress

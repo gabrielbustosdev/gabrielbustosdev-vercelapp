@@ -261,4 +261,75 @@ export interface ChatbotContextType {
   getConversationFlow: (intent: ConversationIntent) => ConversationFlow | null
   generateFollowUpQuestions: (missingInfo: MissingInfoTracker) => FollowUpQuestion[]
   processUserResponse: (message: string, currentFlow: ConversationFlow) => void
-} 
+}
+
+// ===== NUEVOS TIPOS PARA PERSONALIZACIÓN DINÁMICA =====
+
+// Tipos de personalidad del cliente
+export interface ClientPersonality {
+  type: 'executive' | 'entrepreneur' | 'developer' | 'marketer' | 'consultant' | 'general'
+  confidence: number
+  characteristics: {
+    technicalLevel: 'beginner' | 'intermediate' | 'advanced'
+    urgencyLevel: 'low' | 'medium' | 'high'
+    budgetSensitivity: 'low' | 'medium' | 'high'
+    decisionMakingStyle: 'analytical' | 'intuitive' | 'collaborative'
+    communicationStyle: 'formal' | 'casual' | 'technical'
+  }
+  preferences: {
+    detailLevel: 'high' | 'medium' | 'low'
+    examplesNeeded: boolean
+    technicalExplanations: boolean
+    timelineFocus: boolean
+    budgetFocus: boolean
+  }
+}
+
+// Contexto del servicio
+export interface ServiceContext {
+  serviceType: string
+  complexity: 'simple' | 'medium' | 'complex'
+  timeline: 'urgent' | 'standard' | 'flexible'
+  budget: 'low' | 'medium' | 'high'
+  technicalRequirements: string[]
+  businessGoals: string[]
+}
+
+// Memoria de conversación
+export interface ConversationMemory {
+  keyTopics: string[]
+  decisions: string[]
+  concerns: string[]
+  preferences: string[]
+  timeline: Date[]
+  budgetMentions: string[]
+  technicalQuestions: string[]
+}
+
+// Respuesta personalizada
+export interface PersonalizedResponse {
+  message: string
+  tone: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic'
+  detailLevel: 'high' | 'medium' | 'low'
+  includeExamples: boolean
+  includeTechnicalDetails: boolean
+  focusAreas: string[]
+  suggestedActions: string[]
+}
+
+// Estado extendido del chatbot con personalización
+export interface ExtendedChatbotState extends ChatbotState {
+  clientPersonality: ClientPersonality | null
+  serviceContext: ServiceContext | null
+  conversationMemory: ConversationMemory
+  personalizedResponses: PersonalizedResponse[]
+  currentTone: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic'
+}
+
+// Acciones extendidas para personalización
+export type ExtendedChatbotAction = ChatbotAction
+  | { type: 'SET_CLIENT_PERSONALITY'; payload: ClientPersonality }
+  | { type: 'SET_SERVICE_CONTEXT'; payload: ServiceContext }
+  | { type: 'UPDATE_CONVERSATION_MEMORY'; payload: Partial<ConversationMemory> }
+  | { type: 'SET_PERSONALIZED_RESPONSE'; payload: PersonalizedResponse }
+  | { type: 'SET_CURRENT_TONE'; payload: 'formal' | 'casual' | 'technical' | 'empathetic' | 'enthusiastic' } 
