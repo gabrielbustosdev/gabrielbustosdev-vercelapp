@@ -10,10 +10,16 @@ export interface ChatMessage {
 export interface ConversationData {
   name: string
   email: string
+  phone?: string
   projectType: string
   requirements: string
   budget: string
   timeline: string
+  companyName?: string
+  location?: string
+  clientName?: string
+  clientEmail?: string
+  clientPhone?: string
 }
 
 // Estados de conversación
@@ -31,6 +37,30 @@ export interface LoadingState {
   error: string | null
 }
 
+// Tipos para el sistema NLP
+export interface NLPEntity {
+  type: 'name' | 'email' | 'phone' | 'budget' | 'project_type' | 'timeline' | 'company' | 'location'
+  value: string
+  confidence: number
+  startIndex: number
+  endIndex: number
+}
+
+export interface NLPSentiment {
+  score: number
+  label: 'very_negative' | 'negative' | 'neutral' | 'positive' | 'very_positive'
+  emotions: {
+    joy: number
+    sadness: number
+    anger: number
+    fear: number
+    surprise: number
+  }
+}
+
+export type ResponseTone = 'professional' | 'empathetic' | 'enthusiastic' | 'casual'
+export type UrgencyLevel = 'low' | 'medium' | 'high'
+
 // Estado principal del chatbot
 export interface ChatbotState {
   isOpen: boolean
@@ -44,6 +74,11 @@ export interface ChatbotState {
   conversationFlow: ConversationFlow | null
   missingInfo: MissingInfoTracker
   followUpQuestions: FollowUpQuestion[]
+  // Nuevos campos para NLP
+  responseTone: ResponseTone
+  urgencyLevel: UrgencyLevel
+  nlpEntities: NLPEntity[]
+  lastSentiment: NLPSentiment | null
 }
 
 // Acciones para useReducer
@@ -67,33 +102,11 @@ export type ChatbotAction =
   | { type: 'ADD_FOLLOW_UP_QUESTION'; payload: FollowUpQuestion }
   | { type: 'REMOVE_FOLLOW_UP_QUESTION'; payload: string }
   | { type: 'CLEAR_FOLLOW_UP_QUESTIONS' }
-
-// Tipos para el contexto
-export interface ChatbotContextType {
-  state: ChatbotState
-  dispatch: React.Dispatch<ChatbotAction>
-  openChat: () => void
-  closeChat: () => void
-  addMessage: (message: ChatMessage) => void
-  updateConversationData: (data: Partial<ConversationData>) => void
-  showConsultationModal: () => void
-  hideConsultationModal: () => void
-  resetChat: () => void
-  clearMessages: () => void
-  // Funciones del AI SDK
-  input: string
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
-  reload: () => void
-  // Funciones de análisis
-  analyzeMessageForConsultation: (content: string, allMessages: ChatMessage[]) => MessageAnalysis
-  extractConversationData: (messages: ChatMessage[]) => Partial<ConversationData>
-  // Nuevas funciones para el sistema de intenciones
-  detectIntent: (message: string) => ConversationIntent
-  getConversationFlow: (intent: ConversationIntent) => ConversationFlow | null
-  generateFollowUpQuestions: (missingInfo: MissingInfoTracker) => FollowUpQuestion[]
-  processUserResponse: (message: string, currentFlow: ConversationFlow) => void
-}
+  // Nuevas acciones para NLP
+  | { type: 'SET_RESPONSE_TONE'; payload: ResponseTone }
+  | { type: 'SET_URGENCY_LEVEL'; payload: UrgencyLevel }
+  | { type: 'SET_NLP_ENTITIES'; payload: NLPEntity[] }
+  | { type: 'SET_LAST_SENTIMENT'; payload: NLPSentiment }
 
 // Tipos para análisis de mensajes
 export interface MessageAnalysis {
@@ -113,26 +126,37 @@ export interface ChatbotConfig {
 
 // ===== NUEVOS TIPOS PARA EL SISTEMA DE INTENCIONES =====
 
-// Tipos de intenciones de conversación
+// Tipos de intenciones de conversación (actualizado para ser compatible con NLP)
 export type IntentType = 
   | 'greeting'
+  | 'project_inquiry'
+  | 'budget_discussion'
+  | 'timeline_discussion'
   | 'service_inquiry'
-  | 'project_quote'
-  | 'consultation_request'
-  | 'technical_question'
-  | 'pricing_inquiry'
+  | 'contact_request'
   | 'portfolio_request'
+  | 'consultation_request'
+  | 'pricing_inquiry'
+  | 'technical_question'
+  | 'general_question'
+  | 'goodbye'
+  | 'clarification_request'
+  | 'confirmation'
+  | 'objection'
+  | 'urgency_indicator'
+  | 'project_quote'
   | 'general_information'
   | 'complaint'
-  | 'goodbye'
 
-// Intención de conversación detectada
+// Intención de conversación detectada (actualizado para incluir NLP)
 export interface ConversationIntent {
   type: IntentType
   confidence: number
   keywords: string[]
   context: Record<string, any>
   timestamp: Date
+  entities?: NLPEntity[]
+  sentiment?: NLPSentiment
 }
 
 // Estados de un flujo conversacional
@@ -178,14 +202,18 @@ export interface FlowStep {
   nextState?: FlowState
 }
 
-// Rastreador de información faltante
+// Rastreador de información faltante (actualizado)
 export interface MissingInfoTracker {
   name: boolean
   email: boolean
+  phone: boolean
   projectType: boolean
   requirements: boolean
   budget: boolean
   timeline: boolean
+  companyName: boolean
+  location: boolean
+  project_description: boolean
 }
 
 // Pregunta de seguimiento
@@ -206,4 +234,31 @@ export interface ServiceFlowConfig {
   flowSteps: FlowStep[]
   followUpQuestions: FollowUpQuestion[]
   completionCriteria: (data: Partial<ConversationData>) => boolean
+}
+
+// Tipos para el contexto
+export interface ChatbotContextType {
+  state: ChatbotState
+  dispatch: React.Dispatch<ChatbotAction>
+  openChat: () => void
+  closeChat: () => void
+  addMessage: (message: ChatMessage) => void
+  updateConversationData: (data: Partial<ConversationData>) => void
+  showConsultationModal: () => void
+  hideConsultationModal: () => void
+  resetChat: () => void
+  clearMessages: () => void
+  // Funciones del AI SDK
+  input: string
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  reload: () => void
+  // Funciones de análisis
+  analyzeMessageForConsultation: (content: string, allMessages: ChatMessage[]) => MessageAnalysis
+  extractConversationData: (messages: ChatMessage[]) => Partial<ConversationData>
+  // Nuevas funciones para el sistema de intenciones
+  detectIntent: (message: string) => ConversationIntent
+  getConversationFlow: (intent: ConversationIntent) => ConversationFlow | null
+  generateFollowUpQuestions: (missingInfo: MissingInfoTracker) => FollowUpQuestion[]
+  processUserResponse: (message: string, currentFlow: ConversationFlow) => void
 } 

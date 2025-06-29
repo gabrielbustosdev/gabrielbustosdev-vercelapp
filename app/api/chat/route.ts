@@ -3,10 +3,12 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { streamText } from 'ai'
 import { type NextRequest } from 'next/server'
 import { createGabrielBustosMiddleware } from '@/lib/middleware'
+import { processMessage, validateNLPResult, type NLPResult } from '@/lib/nlp-processor'
+import { determineOptimalTone } from '@/lib/intelligent-response-engine'
 
 export const runtime = 'edge'
 
-const systemPrompt = `Eres el asistente virtual de Gabriel Bustos, desarrollador especializado en:
+const baseSystemPrompt = `Eres el asistente virtual de Gabriel Bustos, desarrollador especializado en:
 
 - Desarrollo Web (Next.js, React, Tailwind)
 - Integración de Inteligencia Artificial (OpenAI, LangChain)
@@ -46,6 +48,55 @@ export async function POST(req: NextRequest) {
       throw new Error('OPENROUTER_API_KEY no está configurada')
     }
 
+    // Analizar el último mensaje del usuario con NLP
+    let enhancedSystemPrompt = baseSystemPrompt
+    let responseTone = 'professional'
+    let urgencyLevel = 'low'
+    let extractedEntities: Array<{ type: string; value: string; confidence: number }> = []
+    let missingInfo: string[] = []
+
+    const lastUserMessage = messages[messages.length - 1]
+    if (lastUserMessage && lastUserMessage.role === 'user') {
+      try {
+        // Procesar el mensaje con NLP
+        const nlpResult = await processMessage(lastUserMessage.content)
+        const validatedResult = validateNLPResult(nlpResult)
+
+        // Extraer información del análisis NLP
+        extractedEntities = validatedResult.entities
+        missingInfo = validatedResult.completeness.missingFields
+        responseTone = determineOptimalTone(validatedResult, 
+          validatedResult.intent.type === 'urgency_indicator' || 
+          validatedResult.sentiment.emotions.fear > 0.5 ? 'high' : 'low'
+        )
+        urgencyLevel = validatedResult.intent.type === 'urgency_indicator' || 
+                      validatedResult.sentiment.emotions.fear > 0.5 ? 'high' : 'low'
+
+        // Ajustar el prompt del sistema basado en el análisis
+        enhancedSystemPrompt = generateEnhancedSystemPrompt(
+          baseSystemPrompt,
+          validatedResult,
+          responseTone,
+          urgencyLevel,
+          missingInfo
+        )
+
+        console.log('[NLP Analysis]', {
+          intent: validatedResult.intent.type,
+          confidence: validatedResult.intent.confidence,
+          sentiment: validatedResult.sentiment.label,
+          entities: extractedEntities.length,
+          missingInfo: missingInfo.length,
+          tone: responseTone,
+          urgency: urgencyLevel
+        })
+
+      } catch (nlpError) {
+        console.warn('[NLP Error]', nlpError)
+        // Continuar con el prompt base si NLP falla
+      }
+    }
+
     // Crear el modelo base
     const openrouter = createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY,
@@ -70,7 +121,7 @@ export async function POST(req: NextRequest) {
     const result = await streamText({
       model: enhancedModel,
       messages,
-      system: systemPrompt,
+      system: enhancedSystemPrompt,
       maxTokens: 500,
       temperature: 0.7,
       // Configuraciones adicionales para mejorar la calidad
@@ -95,4 +146,93 @@ export async function POST(req: NextRequest) {
       }
     )
   }
+}
+
+/**
+ * Genera un prompt del sistema mejorado basado en el análisis NLP
+ */
+function generateEnhancedSystemPrompt(
+  basePrompt: string,
+  nlpResult: NLPResult,
+  tone: string,
+  urgency: string,
+  missingInfo: string[]
+): string {
+  let enhancedPrompt = basePrompt
+
+  // Agregar contexto sobre la intención detectada
+  if (nlpResult.intent.confidence > 0.7) {
+    enhancedPrompt += `\n\nCONTEXTO DE LA CONVERSACIÓN:
+- Intención detectada: ${nlpResult.intent.type} (confianza: ${Math.round(nlpResult.intent.confidence * 100)}%)
+- Sentimiento del usuario: ${nlpResult.sentiment.label}
+- Nivel de urgencia: ${urgency}
+- Información faltante: ${missingInfo.join(', ') || 'ninguna'}`
+
+    // Ajustar el tono basado en el análisis
+    if (tone === 'empathetic') {
+      enhancedPrompt += `\n\nINSTRUCCIONES DE TONO EMPÁTICO:
+- El usuario parece estar frustrado o preocupado
+- Usa un tono más comprensivo y de apoyo
+- Reconoce sus preocupaciones antes de ofrecer soluciones
+- Sé más paciente y detallado en tus explicaciones`
+    } else if (tone === 'enthusiastic') {
+      enhancedPrompt += `\n\nINSTRUCCIONES DE TONO ENTUSIASTA:
+- El usuario está muy interesado y positivo
+- Refleja su entusiasmo en tu respuesta
+- Sé más dinámico y motivador
+- Enfatiza las oportunidades y beneficios`
+    } else if (tone === 'professional') {
+      enhancedPrompt += `\n\nINSTRUCCIONES DE TONO PROFESIONAL:
+- Mantén un tono formal pero accesible
+- Sé directo y eficiente
+- Enfócate en hechos y soluciones
+- Si hay urgencia, prioriza la información más importante`
+    }
+
+    // Instrucciones específicas por intención
+    switch (nlpResult.intent.type) {
+      case 'project_inquiry':
+        enhancedPrompt += `\n\nINSTRUCCIONES PARA CONSULTA DE PROYECTO:
+- El usuario está interesado en un proyecto específico
+- Recopila información sobre: ${missingInfo.join(', ')}
+- Ofrece ejemplos relevantes de proyectos similares
+- Sugiere agendar una consulta para discutir detalles`
+        break
+
+      case 'budget_discussion':
+        enhancedPrompt += `\n\nINSTRUCCIONES PARA DISCUSIÓN DE PRESUPUESTO:
+- El usuario está preocupado por el presupuesto
+- Sé transparente sobre los rangos de precios
+- Explica el valor que recibirá por su inversión
+- Ofrece opciones escalables según su presupuesto`
+        break
+
+      case 'urgency_indicator':
+        enhancedPrompt += `\n\nINSTRUCCIONES PARA URGENCIA:
+- El usuario necesita una respuesta rápida
+- Prioriza la información más crítica
+- Ofrece opciones de contacto inmediato
+- Sugiere agendar una consulta urgente`
+        break
+
+      case 'technical_question':
+        enhancedPrompt += `\n\nINSTRUCCIONES PARA PREGUNTA TÉCNICA:
+- Proporciona información técnica precisa
+- Usa ejemplos y analogías cuando sea útil
+- Ofrece recursos adicionales si es necesario
+- Sugiere consulta técnica especializada si es complejo`
+        break
+    }
+
+    // Si hay información faltante, agregar instrucciones para recopilarla
+    if (missingInfo.length > 0) {
+      enhancedPrompt += `\n\nINFORMACIÓN FALTANTE A RECOPILAR:
+- Campos faltantes: ${missingInfo.join(', ')}
+- Haz preguntas específicas para obtener esta información
+- Explica por qué es importante cada campo
+- Sé paciente si el usuario no proporciona toda la información de una vez`
+    }
+  }
+
+  return enhancedPrompt
 }

@@ -14,10 +14,16 @@ export const initialState: ChatbotState = {
   conversationData: {
     name: "",
     email: "",
+    phone: "",
     projectType: "",
     requirements: "",
     budget: "",
-    timeline: ""
+    timeline: "",
+    companyName: "",
+    location: "",
+    clientName: "",
+    clientEmail: "",
+    clientPhone: ""
   },
   conversationState: 'idle',
   loading: {
@@ -31,12 +37,21 @@ export const initialState: ChatbotState = {
   missingInfo: {
     name: true,
     email: true,
+    phone: true,
     projectType: true,
     requirements: true,
     budget: true,
-    timeline: true
+    timeline: true,
+    companyName: true,
+    location: true,
+    project_description: true
   },
-  followUpQuestions: []
+  followUpQuestions: [],
+  // Nuevos campos para NLP
+  responseTone: 'professional',
+  urgencyLevel: 'low',
+  nlpEntities: [],
+  lastSentiment: null
 }
 
 // Función para actualizar datos de conversación de forma inmutable
@@ -175,6 +190,31 @@ export function chatbotReducer(state: ChatbotState, action: ChatbotAction): Chat
       return {
         ...state,
         followUpQuestions: []
+      }
+
+    // Nuevas acciones para NLP
+    case 'SET_RESPONSE_TONE':
+      return {
+        ...state,
+        responseTone: action.payload
+      }
+
+    case 'SET_URGENCY_LEVEL':
+      return {
+        ...state,
+        urgencyLevel: action.payload
+      }
+
+    case 'SET_NLP_ENTITIES':
+      return {
+        ...state,
+        nlpEntities: action.payload
+      }
+
+    case 'SET_LAST_SENTIMENT':
+      return {
+        ...state,
+        lastSentiment: action.payload
       }
 
     default:

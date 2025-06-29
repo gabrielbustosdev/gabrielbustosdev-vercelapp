@@ -14,6 +14,15 @@ import {
 } from './types'
 import { chatbotReducer, initialState } from './chatbot-reducer'
 import { ConversationEngine } from './conversation-engine'
+import { 
+  processMessage, 
+  validateNLPResult, 
+  type NLPResult, 
+  type Entity, 
+  type Intent, 
+  type Sentiment, 
+  type InformationCompleteness 
+} from '../lib/nlp-processor'
 
 // Crear el contexto del chatbot
 const ChatbotContext = createContext<ChatbotContextType | undefined>(undefined)
@@ -143,43 +152,133 @@ export const useChatbotLogic = () => {
   }, [])
 
   // Función para manejar el envío de mensajes con detección de intenciones
-  const handleSubmitWithIntent = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitWithIntent = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
     if (!input.trim()) return
     
-    // Detectar intención del mensaje del usuario
-    const intent = detectIntent(input)
-    dispatch({ type: 'SET_CURRENT_INTENT', payload: intent })
-    
-    // Obtener flujo conversacional
-    const flow = getConversationFlow(intent)
-    if (flow) {
-      dispatch({ type: 'SET_CONVERSATION_FLOW', payload: flow })
+    try {
+      // Procesar el mensaje con NLP
+      const nlpResult = await processMessage(input)
       
-      // Procesar respuesta del usuario si hay un flujo activo
-      if (state.conversationFlow) {
-        processUserResponse(input, state.conversationFlow)
-      }
-    }
-    
-    // Generar preguntas de seguimiento si es necesario
-    if (state.missingInfo) {
-      const followUpQuestions = generateFollowUpQuestions(state.missingInfo)
-      if (followUpQuestions.length > 0) {
-        // Limpiar preguntas anteriores
-        dispatch({ type: 'CLEAR_FOLLOW_UP_QUESTIONS' })
-        
-        // Agregar nuevas preguntas
-        followUpQuestions.forEach(question => {
-          dispatch({ type: 'ADD_FOLLOW_UP_QUESTION', payload: question })
+      // Validar el resultado NLP
+      const validatedResult = validateNLPResult(nlpResult)
+      
+      // Extraer información del procesamiento NLP
+      const extractedData: Partial<ConversationData> = {}
+      
+      // Mapear entidades extraídas a datos de conversación
+      validatedResult.entities.forEach(entity => {
+        switch (entity.type) {
+          case 'name':
+            extractedData.clientName = entity.value
+            break
+          case 'email':
+            extractedData.clientEmail = entity.value
+            break
+          case 'phone':
+            extractedData.clientPhone = entity.value
+            break
+          case 'budget':
+            extractedData.budget = entity.value
+            break
+          case 'timeline':
+            extractedData.timeline = entity.value
+            break
+          case 'company':
+            extractedData.companyName = entity.value
+            break
+          case 'location':
+            extractedData.location = entity.value
+            break
+          case 'project_type':
+            extractedData.projectType = entity.value
+            break
+        }
+      })
+      
+      // Actualizar datos de conversación con información extraída
+      if (Object.keys(extractedData).length > 0) {
+        dispatch({ 
+          type: 'UPDATE_CONVERSATION_DATA', 
+          payload: extractedData 
         })
       }
+      
+      // Actualizar información faltante basada en el análisis de completitud
+      if (!validatedResult.completeness.isComplete) {
+        const missingInfo: Partial<MissingInfoTracker> = {}
+        validatedResult.completeness.missingFields.forEach(field => {
+          missingInfo[field] = true
+        })
+        
+        if (Object.keys(missingInfo).length > 0) {
+          dispatch({ 
+            type: 'UPDATE_MISSING_INFO', 
+            payload: missingInfo 
+          })
+        }
+      }
+      
+      // Detectar intención usando NLP en lugar del motor de conversación
+      const intent: ConversationIntent = {
+        type: validatedResult.intent.type,
+        confidence: validatedResult.intent.confidence,
+        entities: validatedResult.entities,
+        sentiment: validatedResult.sentiment,
+        timestamp: new Date().toISOString()
+      }
+      
+      dispatch({ type: 'SET_CURRENT_INTENT', payload: intent })
+      
+      // Obtener flujo conversacional basado en la intención NLP
+      const flow = getConversationFlow(intent)
+      if (flow) {
+        dispatch({ type: 'SET_CONVERSATION_FLOW', payload: flow })
+        
+        // Procesar respuesta del usuario si hay un flujo activo
+        if (state.conversationFlow) {
+          processUserResponse(input, state.conversationFlow)
+        }
+      }
+      
+      // Generar preguntas de seguimiento si es necesario
+      if (state.missingInfo) {
+        const followUpQuestions = generateFollowUpQuestions(state.missingInfo)
+        if (followUpQuestions.length > 0) {
+          // Limpiar preguntas anteriores
+          dispatch({ type: 'CLEAR_FOLLOW_UP_QUESTIONS' })
+          
+          // Agregar nuevas preguntas
+          followUpQuestions.forEach(question => {
+            dispatch({ type: 'ADD_FOLLOW_UP_QUESTION', payload: question })
+          })
+        }
+      }
+      
+      // Ajustar el tono de respuesta basado en el sentimiento
+      if (validatedResult.sentiment.label === 'negative' || validatedResult.sentiment.label === 'very_negative') {
+        dispatch({ type: 'SET_RESPONSE_TONE', payload: 'empathetic' })
+      } else if (validatedResult.sentiment.label === 'positive' || validatedResult.sentiment.label === 'very_positive') {
+        dispatch({ type: 'SET_RESPONSE_TONE', payload: 'enthusiastic' })
+      } else {
+        dispatch({ type: 'SET_RESPONSE_TONE', payload: 'professional' })
+      }
+      
+      // Detectar urgencia
+      if (validatedResult.intent.type === 'urgency_indicator' || 
+          validatedResult.sentiment.emotions.fear > 0.5) {
+        dispatch({ type: 'SET_URGENCY_LEVEL', payload: 'high' })
+      }
+      
+    } catch (error) {
+      console.error('Error procesando mensaje con NLP:', error)
+      // Fallback al procesamiento original si NLP falla
     }
     
     // Continuar con el flujo normal del AI SDK
     handleSubmit(e)
-  }, [input, detectIntent, getConversationFlow, processUserResponse, state.conversationFlow, state.missingInfo, generateFollowUpQuestions, handleSubmit])
+  }, [input, getConversationFlow, processUserResponse, state.conversationFlow, state.missingInfo, generateFollowUpQuestions, handleSubmit])
 
   // Función para analizar mensajes y detectar oportunidades de consulta
   const analyzeMessageForConsultation = (
