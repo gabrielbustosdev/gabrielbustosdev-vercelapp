@@ -1,9 +1,10 @@
 "use client"
 
-import type React from "react"
 import { useRef, useEffect, useState } from "react"
 import { useChat } from "ai/react"
-import { Bot, User, Send, Loader2, AlertCircle, Calendar } from "lucide-react"
+import { Send, X, Bot, User, Sparkles } from "lucide-react"
+import { useChatStore } from "@/lib/store/chatStore"
+import { useContextEvolution } from "@/lib/hooks/useContextEvolution"
 import ChatConsultationModal from "./ChatConsultationModal"
 
 interface ChatBotProps {
@@ -16,26 +17,47 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [showConsultationModal, setShowConsultationModal] = useState(false)
-  const [conversationData, setConversationData] = useState({
-    name: "",
-    email: "",
-    projectType: "",
-    requirements: "",
-    budget: "",
-    timeline: ""
-  })
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
 
-  // Usar el hook useChat del AI SDK
+  // Usar el store centralizado
+  const {
+    isOpen: isChatOpen,
+    isLoading,
+    error,
+    currentConversation,
+    openChat,
+    closeChat,
+    setLoading,
+    setError,
+    startNewConversation,
+    saveConversation,
+    clearConversation
+  } = useChatStore()
+
+  // Usar el contexto evolutivo
+  const { processMessage, shouldSuggestConsultation } = useContextEvolution()
+
+  // Inicializar conversación cuando se abre el chat
+  useEffect(() => {
+    if (isOpen && !currentConversation) {
+      startNewConversation(sessionId)
+    }
+  }, [isOpen, currentConversation, startNewConversation, sessionId])
+
+  // Usar el hook useChat del AI SDK con contexto evolutivo
   const { 
     messages, 
     input, 
     handleInputChange, 
     handleSubmit, 
-    isLoading, 
-    error, 
+    isLoading: aiLoading, 
+    error: aiError, 
     reload
   } = useChat({
     api: "/api/chat",
+    body: {
+      conversationContext: currentConversation
+    },
     initialMessages: [
       {
         id: "welcome",
@@ -45,12 +67,39 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     ],
     onError: (error) => {
       console.error('Chat error:', error)
+      setError(error.message)
     },
     onFinish: (message) => {
       // Analizar el mensaje del asistente para detectar oportunidades de consulta
       analyzeMessageForConsultation(message.content)
+      
+      // Guardar conversación
+      saveConversation()
     }
   })
+
+  // Sincronizar estado del store con el chat
+  useEffect(() => {
+    if (isOpen !== isChatOpen) {
+      if (isOpen) {
+        openChat()
+      } else {
+        closeChat()
+      }
+    }
+  }, [isOpen, isChatOpen, openChat, closeChat])
+
+  // Sincronizar loading state
+  useEffect(() => {
+    setLoading(aiLoading)
+  }, [aiLoading, setLoading])
+
+  // Sincronizar error state
+  useEffect(() => {
+    if (aiError) {
+      setError(aiError.message)
+    }
+  }, [aiError, setError])
 
   // Función para analizar mensajes y detectar oportunidades de consulta
   const analyzeMessageForConsultation = (content: string) => {
@@ -58,136 +107,34 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     
     // Detectar si el asistente sugiere abrir automáticamente la consulta
     if (lowerContent.includes('[auto_open_consultation]')) {
-      // Extraer información de la conversación y abrir modal automáticamente
-      extractConversationData()
       setTimeout(() => {
         setShowConsultationModal(true)
-      }, 1000) // Pequeño delay para que el usuario vea la respuesta
+      }, 1000)
       return
     }
     
-    // Detectar si el usuario mostró interés en servicios
-    const hasInterest = lowerContent.includes('interesado') || 
-                       lowerContent.includes('me gustaría') || 
-                       lowerContent.includes('quiero') ||
-                       lowerContent.includes('necesito') ||
-                       lowerContent.includes('proyecto')
-    
-    // Detectar si el asistente sugirió agendar consulta
-    const suggestedConsultation = lowerContent.includes('agendar') || 
-                                 lowerContent.includes('consulta') || 
-                                 lowerContent.includes('contactar')
-    
-    if (hasInterest || suggestedConsultation) {
-      // Extraer información de la conversación
-      extractConversationData()
+    // Verificar si hay suficiente contexto para sugerir consulta
+    if (shouldSuggestConsultation()) {
+      // Extraer información de la conversación y abrir modal automáticamente
+      setTimeout(() => {
+        setShowConsultationModal(true)
+      }, 2000)
     }
   }
 
-  // Función para extraer datos de la conversación
-  const extractConversationData = () => {
-    const userMessages = messages.filter(m => m.role === 'user')
-    const assistantMessages = messages.filter(m => m.role === 'assistant')
+  // Función para manejar el envío de mensajes con contexto evolutivo
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     
-    const extractedData = {
-      name: "",
-      email: "",
-      projectType: "",
-      requirements: "",
-      budget: "",
-      timeline: ""
+    if (!input.trim()) return
+
+    // Procesar mensaje con contexto evolutivo
+    if (currentConversation) {
+      processMessage(input)
     }
 
-    // Analizar todos los mensajes del usuario para extraer información
-    userMessages.forEach(message => {
-      const content = message.content.toLowerCase()
-      
-      // Extraer nombre
-      const nameMatch = content.match(/(?:me llamo|soy|mi nombre es)\s+([A-Za-zÁáÉéÍíÓóÚúÑñ\s]+)/i)
-      if (nameMatch && !extractedData.name) {
-        extractedData.name = nameMatch[1].trim()
-      }
-      
-      // Extraer email
-      const emailMatch = content.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/)
-      if (emailMatch && !extractedData.email) {
-        extractedData.email = emailMatch[0]
-      }
-      
-      // Extraer tipo de proyecto
-      const projectKeywords = {
-        'landing page': 'Landing Page',
-        'sitio web': 'Landing Page',
-        'página web': 'Landing Page',
-        'plataforma': 'Plataforma con IA',
-        'inteligencia artificial': 'Plataforma con IA',
-        'chatbot': 'Plataforma con IA',
-        'ia': 'Plataforma con IA',
-        'ai': 'Plataforma con IA',
-        'rebranding': 'Rebranding',
-        'renovar': 'Rebranding',
-        'optimizar': 'Rebranding',
-        'desarrollo web': 'Desarrollo Web',
-        'aplicación': 'Desarrollo Web',
-        'app': 'Desarrollo Web',
-        'consultoría': 'Consultoría'
-      }
-      
-      for (const [keyword, projectType] of Object.entries(projectKeywords)) {
-        if (content.includes(keyword) && !extractedData.projectType) {
-          extractedData.projectType = projectType
-          break
-        }
-      }
-      
-      // Extraer presupuesto
-      const budgetMatch = content.match(/(?:presupuesto|budget|inversión)\s*(?:de|es|aproximado)?\s*(\$?\d+(?:\.\d+)?(?:\s*-\s*\$?\d+(?:\.\d+)?)?(?:\s*ars|\s*pesos)?)/i)
-      if (budgetMatch && !extractedData.budget) {
-        extractedData.budget = budgetMatch[1].trim()
-      }
-      
-      // Extraer timeline
-      const timelineMatch = content.match(/(?:timeline|plazo|tiempo|urgente|normal|flexible)/i)
-      if (timelineMatch && !extractedData.timeline) {
-        if (content.includes('urgente')) {
-          extractedData.timeline = 'Urgente (1-2 semanas)'
-        } else if (content.includes('normal')) {
-          extractedData.timeline = 'Normal (1-2 meses)'
-        } else if (content.includes('flexible')) {
-          extractedData.timeline = 'Flexible (3+ meses)'
-        }
-      }
-      
-      // Extraer requerimientos (último mensaje largo del usuario)
-      if (content.length > 30 && !extractedData.requirements) {
-        extractedData.requirements = message.content
-      }
-    })
-
-    // Analizar respuestas del asistente para complementar información
-    assistantMessages.forEach(message => {
-      const content = message.content.toLowerCase()
-      
-      // Si el asistente mencionó un tipo de proyecto específico
-      if (!extractedData.projectType) {
-        const projectKeywords = {
-          'landing page': 'Landing Page',
-          'plataforma con ia': 'Plataforma con IA',
-          'rebranding': 'Rebranding',
-          'desarrollo web': 'Desarrollo Web',
-          'consultoría': 'Consultoría'
-        }
-        
-        for (const [keyword, projectType] of Object.entries(projectKeywords)) {
-          if (content.includes(keyword)) {
-            extractedData.projectType = projectType
-            break
-          }
-        }
-      }
-    })
-
-    setConversationData(extractedData)
+    // Enviar mensaje al chat
+    handleSubmit(e)
   }
 
   const scrollToBottom = () => {
@@ -203,11 +150,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
       inputRef.current.focus()
     }
   }, [isOpen])
-
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    handleSubmit(e)
-  }
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("es-ES", {
@@ -249,18 +191,29 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
     )
   }
 
-  const clearChat = () => {
-    // Recargar la página para reiniciar el chat
+  const handleClearChat = () => {
+    clearConversation()
     window.location.reload()
   }
 
   const openConsultationModal = () => {
-    extractConversationData()
     setShowConsultationModal(true)
   }
 
   const closeConsultationModal = () => {
     setShowConsultationModal(false)
+  }
+
+  // Obtener datos de la conversación para el modal
+  const getConversationData = () => {
+    if (!currentConversation) return {}
+    
+    return {
+      projectType: currentConversation.extractedData.projectType || "",
+      requirements: currentConversation.extractedData.requirements || "",
+      budget: currentConversation.extractedData.budget || "",
+      timeline: currentConversation.extractedData.timeline || ""
+    }
   }
 
   // No mostrar el widget si el chat ya está abierto
@@ -304,6 +257,14 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Indicador de contexto evolutivo */}
+              {currentConversation && (
+                <div className="flex items-center space-x-1 px-2 py-1 bg-blue-500/20 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs text-blue-300">IA Contextual</span>
+                </div>
+              )}
+              
               {/* Botón de Consulta */}
               <button
                 onClick={openConsultationModal}
@@ -311,12 +272,12 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
                 aria-label="Agendar consulta"
                 title="Agendar consulta"
               >
-                <Calendar className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" />
               </button>
               
               {messages.length > 1 && (
                 <button
-                  onClick={clearChat}
+                  onClick={handleClearChat}
                   className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
                   aria-label="Limpiar chat"
                 >
@@ -375,7 +336,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               <div className="flex justify-start">
                 <div className="flex items-start space-x-2 max-w-[80%]">
                   <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                    <AlertCircle className="w-4 h-4 text-white" />
+                    <X className="w-4 h-4 text-white" />
                   </div>
                   <div className="bg-red-900/50 border border-red-500 text-red-400 rounded-2xl px-4 py-3">
                     <p className="text-sm">Lo siento, hubo un error. Por favor, inténtalo de nuevo.</p>
@@ -414,7 +375,9 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
                 aria-label="Enviar mensaje"
               >
                 {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                 ) : (
                   <Send className="w-5 h-5" />
                 )}
@@ -428,7 +391,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
       <ChatConsultationModal
         isOpen={showConsultationModal}
         onClose={closeConsultationModal}
-        conversationData={conversationData}
+        conversationData={getConversationData()}
       />
     </>
   )

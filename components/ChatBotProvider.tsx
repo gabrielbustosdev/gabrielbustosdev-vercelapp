@@ -1,55 +1,24 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
+import { ReactNode } from "react"
 import ChatBot from "./Chatbot"
-
-// Contexto para el estado global del chat
-interface ChatContextType {
-  isChatOpen: boolean
-  openChat: () => void
-  closeChat: () => void
-}
-
-const ChatContext = createContext<ChatContextType | undefined>(undefined)
-
-// Hook personalizado para usar el contexto del chat
-export const useChat = () => {
-  const context = useContext(ChatContext)
-  if (context === undefined) {
-    throw new Error('useChat debe ser usado dentro de un ChatBotProvider')
-  }
-  return context
-}
+import { useChatStore } from "@/lib/store/chatStore"
 
 interface ChatBotProviderProps {
   children: ReactNode
 }
 
 export default function ChatBotProvider({ children }: ChatBotProviderProps) {
-  const [isChatOpen, setIsChatOpen] = useState(false)
-
-  const openChat = () => {
-    setIsChatOpen(true)
-  }
-
-  const closeChat = () => {
-    setIsChatOpen(false)
-  }
-
-  const contextValue: ChatContextType = {
-    isChatOpen,
-    openChat,
-    closeChat
-  }
+  const { isOpen, openChat, closeChat } = useChatStore()
 
   return (
-    <ChatContext.Provider value={contextValue}>
+    <>
       {children}
       <ChatBot 
-        isOpen={isChatOpen} 
+        isOpen={isOpen} 
         onOpen={openChat} 
         onClose={closeChat} 
       />
-    </ChatContext.Provider>
+    </>
   )
 } 
