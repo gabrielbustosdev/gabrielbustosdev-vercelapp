@@ -3,6 +3,9 @@
 import type React from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
+import type { QuoteForm } from "@/schemas/form-schemas"
+import { QuoteFormSchema } from "@/schemas/form-schemas"
+import type { ZodIssue } from "zod"
 
 interface QuoteModalProps {
   isOpen: boolean
@@ -15,17 +18,18 @@ interface QuoteModalProps {
 }
 
 export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<QuoteForm>({
+    type: "quote",
     name: "",
     email: "",
     company: "",
     phone: "",
-    budget: "",
-    timeline: "",
     message: "",
+    service: undefined,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+  const [errors, setErrors] = useState<Partial<Record<keyof QuoteForm, string>>>({})
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -36,35 +40,56 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
     e.preventDefault()
     setIsSubmitting(true)
     setSubmitStatus("idle")
+    setErrors({})
+
+    // Validación básica en frontend para UX
+    const result = QuoteFormSchema.safeParse({ ...formData, service: selectedService })
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof QuoteForm, string>> = {}
+      result.error.errors.forEach(err => {
+        const field = err.path[0] as keyof QuoteForm
+        if (!fieldErrors[field]) fieldErrors[field] = err.message
+      })
+      setErrors(fieldErrors)
+      setIsSubmitting(false)
+      return
+    }
 
     try {
-      const response = await fetch("/api/quote", {
+      const response = await fetch("/api/form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formData,
-          service: selectedService,
-        }),
+        body: JSON.stringify({ ...formData, service: selectedService }),
       })
 
       if (response.ok) {
         setSubmitStatus("success")
         setFormData({
+          type: "quote",
           name: "",
           email: "",
           company: "",
           phone: "",
-          budget: "",
-          timeline: "",
           message: "",
+          service: undefined,
         })
         setTimeout(() => {
           onClose()
           setSubmitStatus("idle")
         }, 2000)
       } else {
+        // Manejar errores de validación del backend
+        const data = await response.json()
+        if (data.details && Array.isArray(data.details)) {
+          const fieldErrors: Partial<Record<keyof QuoteForm, string>> = {}
+          data.details.forEach((err: ZodIssue) => {
+            const field = err.path[0] as keyof QuoteForm
+            if (!fieldErrors[field]) fieldErrors[field] = err.message
+          })
+          setErrors(fieldErrors)
+        }
         setSubmitStatus("error")
       }
     } catch (error) {
@@ -98,10 +123,7 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">
-                Solicitar{" "}
-                <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent">
-                  Cotización
-                </span>
+                Solicitar Cotización
               </h2>
               <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors duration-200">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,7 +142,11 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              noValidate
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
@@ -136,6 +162,7 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="Tu nombre"
                   />
+                  {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -152,6 +179,7 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="tu@email.com"
                   />
+                  {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                 </div>
               </div>
 
@@ -169,6 +197,7 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="Tu empresa"
                   />
+                  {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
                 </div>
 
                 <div>
@@ -184,54 +213,15 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="+1 234 567 8900"
                   />
+                  {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="budget" className="block text-sm font-medium text-gray-300 mb-2">
-                    Presupuesto aproximado
-                  </label>
-                  <select
-                    id="budget"
-                    name="budget"
-                    value={formData.budget}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
-                  >
-                    <option value="">Selecciona un rango</option>
-                    <option value="50k-100k">$50.000 - $100.000 ARS</option>
-                    <option value="100k-200k">$100.000 - $200.000 ARS</option>
-                    <option value="200k-500k">$200.000 - $500.000 ARS</option>
-                    <option value="500k+">Más de $500.000 ARS</option>
-                    <option value="to-discuss">A discutir</option>
-                  </select>
-                </div>
 
-                <div>
-                  <label htmlFor="timeline" className="block text-sm font-medium text-gray-300 mb-2">
-                    Timeline del proyecto
-                  </label>
-                  <select
-                    id="timeline"
-                    name="timeline"
-                    value={formData.timeline}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
-                  >
-                    <option value="">Selecciona timeline</option>
-                    <option value="1-2-weeks">1-2 semanas</option>
-                    <option value="1-month">1 mes</option>
-                    <option value="2-3-months">2-3 meses</option>
-                    <option value="3+months">Más de 3 meses</option>
-                    <option value="flexible">Flexible</option>
-                  </select>
-                </div>
-              </div>
 
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
-                  Detalles del proyecto *
+                  Cuéntame sobre tu proyecto *
                 </label>
                 <textarea
                   id="message"
@@ -241,14 +231,15 @@ export default function QuoteModal({ isOpen, onClose, selectedService }: QuoteMo
                   value={formData.message}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
-                  placeholder="Cuéntame más sobre tu proyecto, requisitos específicos, funcionalidades que necesitas..."
+                  placeholder="Describe tu idea, qué necesitas que haga tu aplicación o sitio web, y cualquier característica especial que tengas en mente..."
                 />
+                {errors.message && <p className="text-red-400 text-xs mt-1">{errors.message}</p>}
               </div>
 
               {/* Status Messages */}
               {submitStatus === "success" && (
                 <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
-                  <p className="text-green-400 text-center">¡Cotización solicitada exitosamente! Te contactaré dentro de las próximas 24 horas.</p>
+                  <p className="text-green-400 text-center">¡Solicitud enviada exitosamente! Te contactaré dentro de las próximas 24 horas para discutir tu proyecto.</p>
                 </div>
               )}
 

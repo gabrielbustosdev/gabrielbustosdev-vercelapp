@@ -3,19 +3,22 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useChat } from "@/components/ChatBotProvider"
+import type { ContactForm } from "@/schemas/form-schemas"
+import { ContactFormSchema } from "@/schemas/form-schemas"
+import type { ZodIssue } from "zod"
 
 export default function ContactoPage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactForm>({
+    type: "contact",
     name: "",
     email: "",
     company: "",
-    project: "",
+    project: undefined,
     message: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
-  const { isChatOpen, openChat } = useChat()
+  const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -26,9 +29,23 @@ export default function ContactoPage() {
     e.preventDefault()
     setIsSubmitting(true)
     setSubmitStatus("idle")
+    setErrors({})
+
+    // Validación básica en frontend para UX
+    const result = ContactFormSchema.safeParse(formData)
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof ContactForm, string>> = {}
+      result.error.errors.forEach(err => {
+        const field = err.path[0] as keyof ContactForm
+        if (!fieldErrors[field]) fieldErrors[field] = err.message
+      })
+      setErrors(fieldErrors)
+      setIsSubmitting(false)
+      return
+    }
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch("/api/form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -39,13 +56,24 @@ export default function ContactoPage() {
       if (response.ok) {
         setSubmitStatus("success")
         setFormData({
+          type: "contact",
           name: "",
           email: "",
           company: "",
-          project: "",
+          project: undefined,
           message: "",
         })
       } else {
+        // Manejar errores de validación del backend
+        const data = await response.json()
+        if (data.details && Array.isArray(data.details)) {
+          const fieldErrors: Partial<Record<keyof ContactForm, string>> = {}
+          data.details.forEach((err: ZodIssue) => {
+            const field = err.path[0] as keyof ContactForm
+            if (!fieldErrors[field]) fieldErrors[field] = err.message
+          })
+          setErrors(fieldErrors)
+        }
         setSubmitStatus("error")
       }
     } catch (error) {
@@ -74,7 +102,11 @@ export default function ContactoPage() {
           {/* Contact Form */}
           <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-8">
             <h2 className="text-2xl font-bold text-white mb-6">Envíame un mensaje</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-6"
+              noValidate
+            >
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
                   Nombre completo
@@ -89,6 +121,7 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="Tu nombre"
                 />
+                {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
               </div>
 
               <div>
@@ -105,6 +138,7 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="tu@email.com"
                 />
+                {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div>
@@ -120,6 +154,7 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="Tu empresa"
                 />
+                {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
               </div>
 
               <div>
@@ -139,6 +174,7 @@ export default function ContactoPage() {
                   <option value="consulting">Consultoría</option>
                   <option value="other">Otro</option>
                 </select>
+                {errors.project && <p className="text-red-400 text-xs mt-1">{errors.project}</p>}
               </div>
 
               <div>
@@ -155,6 +191,7 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
                   placeholder="Cuéntame sobre tu proyecto..."
                 ></textarea>
+                {errors.message && <p className="text-red-400 text-xs mt-1">{errors.message}</p>}
               </div>
 
               {/* Status Messages */}
@@ -240,13 +277,7 @@ export default function ContactoPage() {
                 Mi agente de IA está disponible 24/7 para responder tus preguntas y agendar una llamada.
               </p>
               <button
-                onClick={openChat}
-                disabled={isChatOpen}
-                className={`w-full py-3 rounded-lg transition-all duration-300 font-semibold ${
-                  isChatOpen 
-                    ? "bg-gray-500 text-gray-300 cursor-not-allowed" 
-                    : "bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
-                }`}
+                className="w-full py-3 rounded-lg transition-all duration-300 font-semibold bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
               >
                 Hablar con mi Agente AI
               </button>

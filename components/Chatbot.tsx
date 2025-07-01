@@ -1,29 +1,18 @@
 "use client"
 
 import type React from "react"
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect } from "react"
 import { useChat } from "ai/react"
 import { Bot, User, Send, Loader2, AlertCircle, Calendar } from "lucide-react"
-import ChatConsultationModal from "./ChatConsultationModal"
 
 interface ChatBotProps {
   isOpen: boolean
   onClose: () => void
-  onOpen: () => void
 }
 
-export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
+export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [showConsultationModal, setShowConsultationModal] = useState(false)
-  const [conversationData, setConversationData] = useState({
-    name: "",
-    email: "",
-    projectType: "",
-    requirements: "",
-    budget: "",
-    timeline: ""
-  })
 
   // Usar el hook useChat del AI SDK
   const { 
@@ -61,8 +50,8 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
       // Extraer información de la conversación y abrir modal automáticamente
       extractConversationData()
       setTimeout(() => {
-        setShowConsultationModal(true)
-      }, 1000) // Pequeño delay para que el usuario vea la respuesta
+        // Pequeño delay para que el usuario vea la respuesta
+      }, 1000)
       return
     }
     
@@ -93,9 +82,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
       name: "",
       email: "",
       projectType: "",
-      requirements: "",
-      budget: "",
-      timeline: ""
+      requirements: ""
     }
 
     // Analizar todos los mensajes del usuario para extraer información
@@ -140,23 +127,7 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
         }
       }
       
-      // Extraer presupuesto
-      const budgetMatch = content.match(/(?:presupuesto|budget|inversión)\s*(?:de|es|aproximado)?\s*(\$?\d+(?:\.\d+)?(?:\s*-\s*\$?\d+(?:\.\d+)?)?(?:\s*ars|\s*pesos)?)/i)
-      if (budgetMatch && !extractedData.budget) {
-        extractedData.budget = budgetMatch[1].trim()
-      }
-      
-      // Extraer timeline
-      const timelineMatch = content.match(/(?:timeline|plazo|tiempo|urgente|normal|flexible)/i)
-      if (timelineMatch && !extractedData.timeline) {
-        if (content.includes('urgente')) {
-          extractedData.timeline = 'Urgente (1-2 semanas)'
-        } else if (content.includes('normal')) {
-          extractedData.timeline = 'Normal (1-2 meses)'
-        } else if (content.includes('flexible')) {
-          extractedData.timeline = 'Flexible (3+ meses)'
-        }
-      }
+
       
       // Extraer requerimientos (último mensaje largo del usuario)
       if (content.length > 30 && !extractedData.requirements) {
@@ -186,8 +157,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
         }
       }
     })
-
-    setConversationData(extractedData)
   }
 
   const scrollToBottom = () => {
@@ -256,32 +225,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
 
   const openConsultationModal = () => {
     extractConversationData()
-    setShowConsultationModal(true)
-  }
-
-  const closeConsultationModal = () => {
-    setShowConsultationModal(false)
-  }
-
-  // No mostrar el widget si el chat ya está abierto
-  if (!isOpen) {
-    return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={onOpen}
-          className="group relative bg-gradient-to-r from-blue-500 to-slate-600 hover:from-blue-600 hover:to-slate-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 animate-pulse"
-          aria-label="Abrir chat con IA"
-        >
-          <Bot className="w-6 h-6" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-ping"></div>
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-            Habla con mi IA
-            <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </div>
-        </button>
-      </div>
-    )
   }
 
   return (
@@ -328,11 +271,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
               <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200" aria-label="Minimizar chat">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200" aria-label="Cerrar chat">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -424,12 +362,6 @@ export default function ChatBot({ isOpen, onClose, onOpen }: ChatBotProps) {
         </div>
       </div>
 
-      {/* Modal de Consulta */}
-      <ChatConsultationModal
-        isOpen={showConsultationModal}
-        onClose={closeConsultationModal}
-        conversationData={conversationData}
-      />
     </>
   )
 }

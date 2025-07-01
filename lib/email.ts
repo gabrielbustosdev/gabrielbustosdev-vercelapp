@@ -168,7 +168,7 @@ export const createClientConfirmationTemplate = (data: {
           <h3 style="margin-top: 0; color: #1e293b;">🎯 Mientras tanto...</h3>
           <p style="margin: 8px 0;">• Revisa mi <a href="${process.env.NEXT_PUBLIC_SITE_URL}/portafolio" style="color: #3b82f6; text-decoration: none;">portafolio</a> para conocer proyectos similares</p>
           <p style="margin: 8px 0;">• Prepara cualquier material o referencia que tengas del proyecto</p>
-          <p style="margin: 8px 0;">• Piensa en tu presupuesto y timeline ideal</p>
+          <p style="margin: 8px 0;">• Prepara cualquier material o referencia que tengas del proyecto</p>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
@@ -227,8 +227,6 @@ export const createQuoteEmailTemplate = (data: {
   email: string
   company?: string
   phone?: string
-  budget?: string
-  timeline?: string
   message: string
   service?: {
     title: string
@@ -236,21 +234,6 @@ export const createQuoteEmailTemplate = (data: {
     price: string
   }
 }) => {
-  const budgetLabels: { [key: string]: string } = {
-    "50k-100k": "$50.000 - $100.000 ARS",
-    "100k-200k": "$100.000 - $200.000 ARS",
-    "200k-500k": "$200.000 - $500.000 ARS",
-    "500k+": "Más de $500.000 ARS",
-    "to-discuss": "A discutir",
-  }
-
-  const timelineLabels: { [key: string]: string } = {
-    "1-2-weeks": "1-2 semanas",
-    "1-month": "1 mes",
-    "2-3-months": "2-3 meses",
-    "3+months": "Más de 3 meses",
-    "flexible": "Flexible",
-  }
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
@@ -276,11 +259,7 @@ export const createQuoteEmailTemplate = (data: {
         </div>
         ` : ""}
 
-        <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="margin-top: 0; color: #1e293b;">💰 Detalles del Proyecto</h3>
-          ${data.budget ? `<p style="margin: 8px 0;"><strong>Presupuesto:</strong> <span style="background: #fef3c7; padding: 4px 8px; border-radius: 4px; color: #92400e;">${budgetLabels[data.budget] || data.budget}</span></p>` : ""}
-          ${data.timeline ? `<p style="margin: 8px 0;"><strong>Timeline:</strong> <span style="background: #fef3c7; padding: 4px 8px; border-radius: 4px; color: #92400e;">${timelineLabels[data.timeline] || data.timeline}</span></p>` : ""}
-        </div>
+
 
         <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #8b5cf6;">
           <h3 style="margin-top: 0; color: #1e293b;">💬 Detalles del Proyecto</h3>
@@ -302,24 +281,7 @@ export const createQuoteClientConfirmationTemplate = (data: {
     description: string
     price: string
   }
-  budget?: string
-  timeline?: string
 }) => {
-  const budgetLabels: { [key: string]: string } = {
-    "50k-100k": "$50.000 - $100.000 ARS",
-    "100k-200k": "$100.000 - $200.000 ARS",
-    "200k-500k": "$200.000 - $500.000 ARS",
-    "500k+": "Más de $500.000 ARS",
-    "to-discuss": "A discutir",
-  }
-
-  const timelineLabels: { [key: string]: string } = {
-    "1-2-weeks": "1-2 semanas",
-    "1-month": "1 mes",
-    "2-3-months": "2-3 meses",
-    "3+months": "Más de 3 meses",
-    "flexible": "Flexible",
-  }
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
@@ -342,11 +304,7 @@ export const createQuoteClientConfirmationTemplate = (data: {
         </div>
         ` : ""}
         
-        <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10b981;">
-          <h3 style="margin-top: 0; color: #1e293b;">📊 Información Proporcionada</h3>
-          ${data.budget ? `<p style="margin: 8px 0;"><strong>💰 Presupuesto:</strong> ${budgetLabels[data.budget] || data.budget}</p>` : ""}
-          ${data.timeline ? `<p style="margin: 8px 0;"><strong>⏰ Timeline:</strong> ${timelineLabels[data.timeline] || data.timeline}</p>` : ""}
-        </div>
+
         
         <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10b981;">
           <h3 style="margin-top: 0; color: #1e293b;">🎯 Mientras tanto...</h3>
@@ -365,6 +323,27 @@ export const createQuoteClientConfirmationTemplate = (data: {
           <p style="margin: 0; color: #1e293b;"><strong>Gabriel Bustos</strong></p>
           <p style="margin: 5px 0; color: #64748b;">Desarrollador Full Stack & Especialista en IA</p>
           <p style="margin: 5px 0;"><a href="mailto:${process.env.GMAIL_USER}" style="color: #3b82f6;">${process.env.GMAIL_USER}</a></p>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+export const createContactClientConfirmationTemplate = (data: { name: string }) => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #3b82f6 0%, #64748b 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">¡Gracias por contactarme!</h1>
+        <p style="color: #e2e8f0; margin: 10px 0 0 0;">Gabriel Bustos - Desarrollador Full Stack</p>
+      </div>
+      <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <p style="font-size: 18px; color: #1e293b;">Hola <strong>${data.name}</strong>,</p>
+        <p style="line-height: 1.6; color: #374151;">He recibido tu mensaje y me pondré en contacto contigo <strong>dentro de las próximas 24 horas</strong>.</p>
+        <p style="line-height: 1.6; color: #374151;">Mientras tanto, puedes revisar mi <a href="${process.env.NEXT_PUBLIC_SITE_URL}/portafolio" style="color: #3b82f6;">portafolio</a> para conocer más sobre mis proyectos.</p>
+        <p style="line-height: 1.6; color: #374151;">¡Gracias por tu interés!</p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0; color: #1e293b;"><strong>Gabriel Bustos</strong></p>
+          <p style="margin: 5px 0; color: #64748b;">Desarrollador Full Stack & Especialista en IA</p>
         </div>
       </div>
     </div>

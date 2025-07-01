@@ -4,6 +4,9 @@ import type React from "react"
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
+import type { ConsultationForm } from "@/schemas/form-schemas"
+import { ConsultationFormSchema } from "@/schemas/form-schemas"
+import type { ZodIssue } from "zod"
 
 interface ConsultationModalProps {
   isOpen: boolean
@@ -11,7 +14,8 @@ interface ConsultationModalProps {
 }
 
 export default function ConsultationModal({ isOpen, onClose }: ConsultationModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ConsultationForm>({
+    type: "consultation",
     name: "",
     email: "",
     company: "",
@@ -23,6 +27,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+  const [errors, setErrors] = useState<Partial<Record<keyof ConsultationForm, string>>>({})
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -33,9 +38,23 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
     e.preventDefault()
     setIsSubmitting(true)
     setSubmitStatus("idle")
+    setErrors({})
+
+    // Validación básica en frontend para UX
+    const result = ConsultationFormSchema.safeParse(formData)
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof ConsultationForm, string>> = {}
+      result.error.errors.forEach(err => {
+        const field = err.path[0] as keyof ConsultationForm
+        if (!fieldErrors[field]) fieldErrors[field] = err.message
+      })
+      setErrors(fieldErrors)
+      setIsSubmitting(false)
+      return
+    }
 
     try {
-      const response = await fetch("/api/schedule-consultation", {
+      const response = await fetch("/api/form", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -46,6 +65,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
       if (response.ok) {
         setSubmitStatus("success")
         setFormData({
+          type: "consultation",
           name: "",
           email: "",
           company: "",
@@ -60,6 +80,16 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
           setSubmitStatus("idle")
         }, 2000)
       } else {
+        // Manejar errores de validación del backend
+        const data = await response.json()
+        if (data.details && Array.isArray(data.details)) {
+          const fieldErrors: Partial<Record<keyof ConsultationForm, string>> = {}
+          data.details.forEach((err: ZodIssue) => {
+            const field = err.path[0] as keyof ConsultationForm
+            if (!fieldErrors[field]) fieldErrors[field] = err.message
+          })
+          setErrors(fieldErrors)
+        }
         setSubmitStatus("error")
       }
     } catch (error) {
@@ -93,10 +123,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">
-                Agendar{" "}
-                <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent">
-                  Consulta
-                </span>
+                Agendar Consulta
               </h2>
               <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors duration-200">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -106,7 +133,11 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              noValidate
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
@@ -122,6 +153,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="Tu nombre"
                   />
+                  {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -138,6 +170,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="tu@email.com"
                   />
+                  {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                 </div>
               </div>
 
@@ -155,6 +188,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="Tu empresa"
                   />
+                  {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
                 </div>
 
                 <div>
@@ -170,6 +204,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     placeholder="+1 234 567 8900"
                   />
+                  {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
                 </div>
               </div>
 
@@ -192,6 +227,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                   <option value="automation">Automatización</option>
                   <option value="other">Otro</option>
                 </select>
+                {errors.projectType && <p className="text-red-400 text-xs mt-1">{errors.projectType}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -209,6 +245,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     min={new Date().toISOString().split("T")[0]}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   />
+                  {errors.preferredDate && <p className="text-red-400 text-xs mt-1">{errors.preferredDate}</p>}
                 </div>
 
                 <div>
@@ -222,7 +259,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     value={formData.preferredTime}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [&>option]:bg-slate-800 [&>option]:text-white"
-                    >
+                  >
                     <option value="">Selecciona horario</option>
                     <option value="09:00">09:00 AM</option>
                     <option value="10:00">10:00 AM</option>
@@ -232,6 +269,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                     <option value="16:00">04:00 PM</option>
                     <option value="17:00">05:00 PM</option>
                   </select>
+                  {errors.preferredTime && <p className="text-red-400 text-xs mt-1">{errors.preferredTime}</p>}
                 </div>
               </div>
 
@@ -248,6 +286,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
                   placeholder="Cuéntame más sobre tu proyecto..."
                 />
+                {errors.message && <p className="text-red-400 text-xs mt-1">{errors.message}</p>}
               </div>
 
               {/* Status Messages */}

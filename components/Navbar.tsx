@@ -3,12 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useChat } from "./ChatBotProvider"
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pathname = usePathname()
-  const { isChatOpen, openChat } = useChat()
 
   const navItems = [
     { href: "/", label: "Inicio" },
@@ -54,13 +52,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <button
-                onClick={openChat}
-                disabled={isChatOpen}
-                className={`px-6 py-2 rounded-full transition-all duration-300 font-medium ${
-                  isChatOpen 
-                    ? "bg-gray-500 text-gray-300 cursor-not-allowed" 
-                    : "bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
-                }`}
+                className="px-6 py-2 rounded-full transition-all duration-300 font-medium bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
               >
                 Hablar con AI
               </button>
@@ -100,16 +92,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <button
-                onClick={() => {
-                  openChat()
-                  setIsMenuOpen(false)
-                }}
-                disabled={isChatOpen}
-                className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 mt-2 ${
-                  isChatOpen 
-                    ? "bg-gray-500 text-gray-300 cursor-not-allowed" 
-                    : "bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
-                }`}
+                className="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 mt-2 bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
               >
                 Hablar con AI
               </button>
