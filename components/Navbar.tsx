@@ -3,8 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useChatContext } from "@/hooks/ChatContext"
 
 export default function Navbar() {
+  const { openChat } = useChatContext()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pathname = usePathname()
 
@@ -53,6 +55,7 @@ export default function Navbar() {
               ))}
               <button
                 className="px-6 py-2 rounded-full transition-all duration-300 font-medium bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
+                onClick={openChat}
               >
                 Hablar con AI
               </button>
@@ -93,6 +96,7 @@ export default function Navbar() {
               ))}
               <button
                 className="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 mt-2 bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
+                onClick={openChat}
               >
                 Hablar con AI
               </button>

@@ -6,6 +6,7 @@ import { useState } from "react"
 import type { ContactForm } from "@/schemas/form-schemas"
 import { ContactFormSchema } from "@/schemas/form-schemas"
 import type { ZodIssue } from "zod"
+import { useChatContext } from "@/hooks/ChatContext"
 
 export default function ContactoPage() {
   const [formData, setFormData] = useState<ContactForm>({
@@ -19,6 +20,7 @@ export default function ContactoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
   const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
+  const { openChat } = useChatContext();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -278,6 +280,7 @@ export default function ContactoPage() {
               </p>
               <button
                 className="w-full py-3 rounded-lg transition-all duration-300 font-semibold bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
+                onClick={openChat}
               >
                 Hablar con mi Agente AI
               </button>
