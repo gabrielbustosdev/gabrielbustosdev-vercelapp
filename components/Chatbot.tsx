@@ -17,7 +17,7 @@ const chatConfig = {
 };
 
 export default function ChatBot() {
-  const { isOpen, openChat, closeChat } = useChatContext()
+  const { isOpen, openChat, closeChat, messages: persistedMessages, addMessage } = useChatContext()
 
   // Usar el hook useChat del AI SDK
   const {
@@ -37,6 +37,36 @@ export default function ChatBot() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, status])
+
+  // Persistir solo el último mensaje del usuario si es nuevo
+  useEffect(() => {
+    const lastUser = [...messages].reverse().find((msg) => msg.role === 'user' && msg.id !== 'welcome');
+    if (
+      lastUser &&
+      lastUser.content.trim() !== '' &&
+      !persistedMessages.some((m) => m.role === 'user' && m.content === lastUser.content)
+    ) {
+      addMessage({ role: 'user', content: lastUser.content });
+    }
+  }, [messages, persistedMessages, addMessage]);
+
+  // Persistir solo el último mensaje del asistente cuando termina el streaming (status 'ready')
+  useEffect(() => {
+    if (status === 'ready') {
+      const lastAssistant = [...messages].reverse().find((msg) => msg.role === 'assistant' && msg.id !== 'welcome');
+      if (
+        lastAssistant &&
+        lastAssistant.content.trim() !== '' &&
+        !persistedMessages.some((m) => m.role === 'assistant' && m.content === lastAssistant.content)
+      ) {
+        addMessage({ role: 'assistant', content: lastAssistant.content });
+      }
+    }
+    // Mostrar los mensajes persistidos en consola para desarrollo
+    if (persistedMessages.length > 0) {
+      console.log('Mensajes persistidos:', persistedMessages);
+    }
+  }, [status, messages, persistedMessages, addMessage]);
 
   useEffect(() => {
     // No hacer nada aquí, el mensaje de bienvenida se renderiza condicionalmente
