@@ -5,6 +5,17 @@ import { useRef, useEffect } from "react"
 import { useChat } from '@ai-sdk/react';
 import { useChatContext } from "@/hooks/ChatContext"
 
+const chatConfig = {
+  api: "/api/chat",
+  initialMessages: [
+    {
+      id: 'welcome',
+      role: 'assistant' as const,
+      content: '¡Hola! 👋 Soy el asistente virtual de Gabriel Bustos. ¿En qué puedo ayudarte hoy sobre desarrollo web, IA o automatización?'
+    }
+  ],
+};
+
 export default function ChatBot() {
   const { isOpen, openChat, closeChat } = useChatContext()
 
@@ -18,7 +29,7 @@ export default function ChatBot() {
     error,
     reload,
     stop
-  } = useChat({});
+  } = useChat(chatConfig);
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -26,6 +37,10 @@ export default function ChatBot() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, status])
+
+  useEffect(() => {
+    // No hacer nada aquí, el mensaje de bienvenida se renderiza condicionalmente
+  }, [isOpen, messages.length, status]);
 
   if (!isOpen) {
     return (
@@ -71,11 +86,6 @@ export default function ChatBot() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <button onClick={closeChat} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200" aria-label="Minimizar chat">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-              </svg>
-            </button>
             <button onClick={closeChat} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200" aria-label="Cerrar chat">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -89,7 +99,7 @@ export default function ChatBot() {
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`flex items-start space-x-2 max-w-[80%] ${message.role === "user" ? "flex-row-reverse space-x-reverse" : ""}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === "user" ? "bg-blue-500" : "bg-gradient-to-r from-slate-600 to-zinc-600"}`}>
+                <div className={`w-8 h-8 min-w-[2rem] min-h-[2rem] rounded-full flex items-center justify-center flex-shrink-0 aspect-square ${message.role === "user" ? "bg-blue-500" : "bg-gradient-to-r from-slate-600 to-zinc-600"}`}>
                   {message.role === "user" ? (
                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -152,14 +162,27 @@ export default function ChatBot() {
         <form onSubmit={handleSubmit} className="p-4 border-t border-white/10 bg-slate-800/50">
           <div className="flex items-center space-x-3">
             <div className="flex-1 relative">
-              <input
-                type="text"
+              <textarea
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Escribe tu mensaje..."
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent pr-12"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent pr-12 resize-none min-h-[48px] max-h-40 scrollbar-hide"
                 disabled={status !== 'ready' && status !== undefined}
                 autoFocus
+                rows={1}
+                onInput={e => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.trim() && status === 'ready') {
+                      handleSubmit(e as any);
+                    }
+                  }
+                }}
               />
             </div>
             <button
@@ -169,7 +192,7 @@ export default function ChatBot() {
               aria-label="Enviar mensaje"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
           </div>

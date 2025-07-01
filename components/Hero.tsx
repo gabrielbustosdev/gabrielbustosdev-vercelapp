@@ -145,7 +145,7 @@ export default function Hero() {
             transition={{ delay: 0.5 }}
             className="flex flex-wrap justify-center gap-4 text-sm text-gray-400"
           >
-            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Next.js + Vercel</span>
+            <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Landing Pages</span>
             <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Sitios Web Profesionales</span>
             <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Chatbots Integrados</span>
             <span className="px-3 py-1 bg-white/5 rounded-full border border-white/10">Automatización con APIs</span>
