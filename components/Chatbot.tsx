@@ -1,9 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useChat } from '@ai-sdk/react';
 import { useChatContext } from "@/hooks/ChatContext"
+import { shouldShowScheduleButton } from "@/lib/detect-schedule-intent";
+import ConsultationModal from "./ConsultationModal";
 
 const chatConfig = {
   api: "/api/chat",
@@ -17,7 +19,7 @@ const chatConfig = {
 };
 
 export default function ChatBot() {
-  const { isOpen, openChat, closeChat } = useChatContext()
+  const { isOpen, openChat, closeChat, messages: persistedMessages, addMessage } = useChatContext()
 
   // Usar el hook useChat del AI SDK
   const {
@@ -38,9 +40,73 @@ export default function ChatBot() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, status])
 
+  // Persistir solo el último mensaje del usuario si es nuevo
+  useEffect(() => {
+    const lastUser = [...messages].reverse().find((msg) => msg.role === 'user' && msg.id !== 'welcome');
+    if (
+      lastUser &&
+      lastUser.content.trim() !== '' &&
+      !persistedMessages.some((m) => m.role === 'user' && m.content === lastUser.content)
+    ) {
+      addMessage({ role: 'user', content: lastUser.content });
+    }
+  }, [messages, persistedMessages, addMessage]);
+
+  // Persistir solo el último mensaje del asistente cuando termina el streaming (status 'ready')
+  useEffect(() => {
+    if (status === 'ready') {
+      const lastAssistant = [...messages].reverse().find((msg) => msg.role === 'assistant' && msg.id !== 'welcome');
+      if (
+        lastAssistant &&
+        lastAssistant.content.trim() !== '' &&
+        !persistedMessages.some((m) => m.role === 'assistant' && m.content === lastAssistant.content)
+      ) {
+        addMessage({ role: 'assistant', content: lastAssistant.content });
+      }
+    }
+    // Mostrar los mensajes persistidos en consola para desarrollo
+    if (persistedMessages.length > 0) {
+      console.log('Mensajes persistidos:', persistedMessages);
+    }
+  }, [status, messages, persistedMessages, addMessage]);
+
   useEffect(() => {
     // No hacer nada aquí, el mensaje de bienvenida se renderiza condicionalmente
   }, [isOpen, messages.length, status]);
+
+  // Detectar si se debe mostrar el botón de agendar
+  const lastAssistant = [...messages].reverse().find((msg) => msg.role === 'assistant' && msg.id !== 'welcome');
+  const showScheduleButton = lastAssistant && shouldShowScheduleButton(lastAssistant.content);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [summary, setSummary] = useState<string>("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  // Función para abrir el modal y solicitar el resumen
+  const handleOpenModal = async () => {
+    setIsModalOpen(true);
+    setSummary("");
+    setSummaryLoading(true);
+    try {
+      const res = await fetch("/api/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: persistedMessages.map(({ role, content }) => ({ role, content })) })
+      });
+      const data = await res.json();
+      setSummary(data.summary || "No se pudo generar el resumen.");
+    } catch {
+      setSummary("No se pudo generar el resumen.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSummary("");
+    setSummaryLoading(false);
+  };
 
   if (!isOpen) {
     return (
@@ -122,6 +188,18 @@ export default function ChatBot() {
                       })
                     : <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
                   }
+                  {/* Botón de respuesta rápida solo debajo del último mensaje del asistente si corresponde */}
+                  {showScheduleButton && lastAssistant && message.id === lastAssistant.id && (
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition-all duration-200"
+                        onClick={handleOpenModal}
+                      >
+                        Agendar una consulta
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -198,6 +276,13 @@ export default function ChatBot() {
           </div>
         </form>
       </div>
+      {/* Modal de consulta */}
+      <ConsultationModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        summary={summary}
+        summaryLoading={summaryLoading}
+      />
     </div>
   )
 }

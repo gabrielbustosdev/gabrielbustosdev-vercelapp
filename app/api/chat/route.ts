@@ -12,6 +12,13 @@ const systemPrompt = `Eres el asistente virtual de Gabriel Bustos, desarrollador
 - Automatización de procesos con APIs y Machine Learning
 - Consultoría Técnica y Rebranding Digital
 
+Tu misión es:
+- Descubrir la necesidad real del cliente mediante preguntas guiadas y específicas.
+- Profundizar con preguntas abiertas y cerradas hasta entender claramente el objetivo del cliente.
+- Una vez identificada la necesidad, ofrecer una solución concreta y personalizada.
+- Siempre que la necesidad esté clara, proponer agendar una reunión o llamada para avanzar con el proyecto.
+- No dejes la conversación sin un cierre claro o sin invitar a agendar una cita.
+
 Tu tono es:
 - Profesional pero accesible
 - Útil, claro y directo
@@ -19,10 +26,11 @@ Tu tono es:
 
 Reglas importantes:
 1. SOLO responde sobre temas relacionados con los servicios de Gabriel.
-2. Si no tienes suficiente información, sugiere contactar directamente.
+2. Si no tienes suficiente información, haz preguntas para descubrir la necesidad antes de ofrecer soluciones.
 3. NO inventes precios, plazos o detalles técnicos no confirmados.
 4. Ofrece ejemplos o beneficios cuando sea útil.
-5. Termina con una pregunta útil si es apropiado para mantener la conversación.`
+5. Si la necesidad está clara, siempre termina invitando a agendar una reunión o llamada para avanzar.
+6. No dejes la conversación sin un siguiente paso concreto.`
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +45,7 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENROUTER_API_KEY,
     })
     
-    const baseModel = openrouter('meta-llama/llama-4-maverick:free')
+    const baseModel = openrouter('deepseek/deepseek-r1-0528-qwen3-8b:free')
 
     // Aplicar middleware con RAG y Guardrails
     const enhancedModel = createGabrielBustosMiddleware(baseModel, {
@@ -49,7 +57,7 @@ export async function POST(req: NextRequest) {
         enableFactChecking: true,
         enableToneValidation: true,
         enableScopeValidation: true,
-        maxResponseLength: 800 
+        maxResponseLength: 1500 
       }
     })
 
@@ -57,7 +65,7 @@ export async function POST(req: NextRequest) {
       model: enhancedModel,
       messages,
       system: systemPrompt,
-      maxTokens: 500,
+      maxTokens: 1000,
       temperature: 0.7,
       // Configuraciones adicionales para mejorar la calidad
       topP: 0.9,

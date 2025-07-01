@@ -39,7 +39,8 @@ export const ConsultationFormSchema = z.object({
   projectType: z.string().min(2, 'Tipo de proyecto requerido'),
   preferredDate: z.string().min(1, 'Fecha preferida requerida'),
   preferredTime: z.string().min(1, 'Hora preferida requerida'),
-  message: z.string().optional()
+  message: z.string().optional(),
+  summary: z.string().optional(),
 })
 export type ConsultationForm = z.infer<typeof ConsultationFormSchema>
 
