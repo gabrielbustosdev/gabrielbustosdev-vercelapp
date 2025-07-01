@@ -83,6 +83,7 @@ export const createConsultationEmailTemplate = (data: {
   preferredDate: string
   preferredTime: string
   message?: string
+  summary?: string
 }) => {
   const formattedDate = new Date(data.preferredDate).toLocaleDateString("es-ES", {
     weekday: "long",
@@ -111,6 +112,11 @@ export const createConsultationEmailTemplate = (data: {
           <p style="margin: 8px 0;"><strong>Tipo de Proyecto:</strong> <span style="background: #dbeafe; padding: 4px 8px; border-radius: 4px; color: #1e40af;">${data.projectType}</span></p>
           <p style="margin: 8px 0;"><strong>Fecha Preferida:</strong> ${formattedDate}</p>
           <p style="margin: 8px 0;"><strong>Hora Preferida:</strong> ${data.preferredTime}</p>
+        </div>
+
+        <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #6366f1;">
+          <h3 style="margin-top: 0; color: #1e293b;">📝 Resumen de la Conversación</h3>
+          <p style="line-height: 1.6; color: #374151;">${data.summary ? data.summary : 'No se proporcionó resumen.'}</p>
         </div>
 
         ${

@@ -154,11 +154,99 @@ function validateTone(text: string): GuardrailResult {
   }
 }
 
+// Validar si la respuesta incluye una invitación a agendar una reunión
+function validateMeetingInvitation(text: string, necesidadClara: boolean): GuardrailResult {
+  if (!necesidadClara) {
+    return {
+      isValid: true,
+      severity: 'low',
+      action: 'allow'
+    }
+  }
+  const invitaciones = [
+    'agendar una reunión',
+    'agendar una cita',
+    'programar una llamada',
+    '¿te gustaría que coordinemos',
+    '¿quieres que agendemos',
+    'puedo agendar una reunión',
+    'puedo coordinar una llamada',
+    '¿te gustaría avanzar con una reunión',
+    '¿quieres que te contacte para una reunión',
+    '¿te gustaría que te contacte para avanzar',
+    '¿quieres que coordinemos una llamada',
+    '¿quieres que te contacte para avanzar'
+  ]
+  const lowerText = text.toLowerCase()
+  const found = invitaciones.some(inv => lowerText.includes(inv))
+  if (!found) {
+    return {
+      isValid: false,
+      reason: 'No se invita a agendar una reunión/cita cuando la necesidad está clara',
+      severity: 'medium',
+      action: 'modify'
+    }
+  }
+  return {
+    isValid: true,
+    severity: 'low',
+    action: 'allow'
+  }
+}
+
+// Validar si la respuesta incluye una pregunta relevante para descubrir la necesidad
+function validateDiscoveryQuestion(text: string, necesidadClara: boolean): GuardrailResult {
+  if (necesidadClara) {
+    return {
+      isValid: true,
+      severity: 'low',
+      action: 'allow'
+    }
+  }
+  // Busca signos de pregunta y palabras clave
+  const lowerText = text.toLowerCase()
+  const tienePregunta = lowerText.includes('?') || lowerText.includes('¿')
+  const palabrasClave = [
+    'necesidad', 'objetivo', 'qué buscas', 'qué necesitas', 'qué tipo de', 'cómo te gustaría', 'cuál es tu idea', 'qué funcionalidad', 'qué problema', 'qué esperas', 'qué te gustaría', 'qué tipo de proyecto', 'qué solución', 'qué resultado', 'qué características'
+  ]
+  const found = palabrasClave.some(palabra => lowerText.includes(palabra))
+  if (!tienePregunta || !found) {
+    return {
+      isValid: false,
+      reason: 'No se hace una pregunta relevante para descubrir la necesidad del cliente',
+      severity: 'medium',
+      action: 'modify'
+    }
+  }
+  return {
+    isValid: true,
+    severity: 'low',
+    action: 'allow'
+  }
+}
+
+// Determinar si la necesidad está clara (heurística simple)
+function isNecesidadClara(messages: string[]): boolean {
+  // Si en los últimos 2 mensajes del usuario aparecen palabras como "quiero", "necesito", "busco", "me gustaría", "mi proyecto es", "tengo un problema", consideramos que la necesidad está clara
+  const claves = [
+    'quiero', 'necesito', 'busco', 'me gustaría', 'mi proyecto es', 'tengo un problema', 'requiero', 'estoy buscando',
+    'quiero agendar', 'quiero una reunión', 'quiero una videollamada', 'quiero una cita', 'quiero una consulta',
+    'me gustaría agendar', 'me gustaría una reunión', 'me gustaría una videollamada', 'me gustaría una cita', 'me gustaría una consulta',
+    'puedo agendar', 'puedo tener una reunión', 'puedo tener una videollamada', 'puedo tener una cita', 'puedo tener una consulta',
+    'podemos agendar', 'podemos tener una reunión', 'podemos tener una videollamada', 'podemos tener una cita', 'podemos tener una consulta',
+    'agenda', 'agendar', 'videollamada', 'reunión', 'consulta', 'cita', 'llamada',
+    'enviame un enlace', 'envíame un enlace', 'enviame una invitación', 'envíame una invitación'
+  ];
+  const recientes = messages.slice(-2).join(' ').toLowerCase();
+  return claves.some(clave => recientes.includes(clave));
+}
+
 // Función principal de validación
 export function validateResponse(
   response: string, 
   query: string, 
-  config: GuardrailConfig = defaultConfig
+  config: GuardrailConfig = defaultConfig,
+  conversationHistory: string[] = []
 ): GuardrailResult[] {
   const results: GuardrailResult[] = []
   
@@ -175,6 +263,11 @@ export function validateResponse(
   }
   
   results.push(validateLength(response, config.maxResponseLength))
+
+  // NUEVAS VALIDACIONES DE FLUJO
+  const necesidadClara = isNecesidadClara(conversationHistory)
+  results.push(validateMeetingInvitation(response, necesidadClara))
+  results.push(validateDiscoveryQuestion(response, necesidadClara))
   
   return results
 }
