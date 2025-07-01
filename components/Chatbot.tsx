@@ -179,7 +179,7 @@ export default function ChatBot() {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     if (input.trim() && status === 'ready') {
-                      handleSubmit(e as any);
+                      handleSubmit(e as React.KeyboardEvent<HTMLTextAreaElement>);
                     }
                   }
                 }}
