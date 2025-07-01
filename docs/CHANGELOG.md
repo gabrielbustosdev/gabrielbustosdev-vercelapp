@@ -24,22 +24,37 @@
 
 ---
 
-### Añadido
-- Se amplió el `ChatContext` para almacenar el historial de mensajes del chat, incluyendo métodos para agregar y limpiar mensajes.
-- Se definió el tipo `ChatMessage` para estandarizar la estructura de los mensajes.
-- Se expusieron los métodos y el array de mensajes en el contexto global para su uso en toda la aplicación.
+## Etapa 2 - Generación de resumen en el backend
 
-### Integración en el Chatbot
-- El componente `Chatbot.tsx` ahora persiste los mensajes relevantes (usuario y asistente) en el contexto global.
-- Se implementó un sistema robusto para evitar duplicados y bucles:
-  - Solo se persiste el **último mensaje** del usuario si su contenido y rol no existen ya en el contexto.
-  - Solo se persiste el **último mensaje** del asistente cuando el estado es `'ready'` y su contenido y rol no existen ya en el contexto.
-  - No se usan los ids de `useChat` para deduplicar, solo el contenido y el rol.
-- Se mantiene la UI minimalista, mostrando el historial persistido únicamente en la consola para fines de desarrollo.
+- Se creó el endpoint `/api/summary` que recibe el historial de mensajes y genera un resumen profesional usando el modelo `deepseek/deepseek-r1-0528-qwen3-8b:free` a través de OpenRouter y el SDK de Vercel AI.
+- El resumen es claro, conciso y orientado a equipos comerciales, siguiendo un system prompt optimizado.
+- El endpoint es robusto, seguro y cumple con las mejores prácticas de validación y manejo de errores.
 
-### Correcciones
-- Se corrigieron problemas de duplicación y bucles infinitos en la persistencia de mensajes.
-- Se evitó la persistencia de mensajes incompletos o en streaming.
+---
 
-### Notas
-- Esta etapa sienta las bases para futuras mejoras como la generación de resúmenes, persistencia en backend y extracción de insights de la conversación. 
+## Etapa 3 - Botón de respuesta rápida para agendar consulta
+
+- Se implementó una función flexible (`shouldShowScheduleButton`) en `/lib/detect-schedule-intent.ts` para detectar la intención de agendar una reunión/consulta en el mensaje del asistente.
+- El botón "Agendar una consulta" aparece solo cuando el asistente invita explícitamente al usuario a agendar.
+- El botón se muestra justo debajo del mensaje relevante, manteniendo la UI limpia y contextual.
+
+---
+
+## Etapa 4 - Modal de consulta con resumen automático y formulario conectado
+
+- Se integró el componente `ConsultationModal` con estado local en el `Chatbot`.
+- Al hacer clic en el botón de agendar, se solicita el resumen de la conversación a `/api/summary` y se muestra arriba del formulario.
+- El resumen solo se solicita al abrir el modal, optimizando recursos y experiencia de usuario.
+- El formulario de contacto incluye los campos básicos y, al enviarse, adjunta automáticamente el resumen generado en el payload enviado al backend.
+- El flujo es robusto, profesional y preparado para futuras integraciones (por ejemplo, CRM, email, etc.).
+
+---
+
+## Estado final del desarrollo
+
+- El chatbot ahora es capaz de:
+  - Persistir la conversación del usuario durante la sesión.
+  - Detectar la intención de agendar una consulta y mostrar un botón de acción contextual.
+  - Generar un resumen profesional de la necesidad del usuario usando IA en el backend.
+  - Mostrar el resumen en un modal junto a un formulario de contacto, y enviar ambos datos al backend.
+- Todo el desarrollo sigue buenas prácticas de UX, arquitectura y extensibilidad para futuras mejoras. 

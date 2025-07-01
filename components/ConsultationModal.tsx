@@ -11,9 +11,11 @@ import type { ZodIssue } from "zod"
 interface ConsultationModalProps {
   isOpen: boolean
   onClose: () => void
+  summary?: string
+  summaryLoading?: boolean
 }
 
-export default function ConsultationModal({ isOpen, onClose }: ConsultationModalProps) {
+export default function ConsultationModal({ isOpen, onClose, summary, summaryLoading }: ConsultationModalProps) {
   const [formData, setFormData] = useState<ConsultationForm>({
     type: "consultation",
     name: "",
@@ -59,7 +61,7 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, summary }),
       })
 
       if (response.ok) {
@@ -130,6 +132,20 @@ export default function ConsultationModal({ isOpen, onClose }: ConsultationModal
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+            </div>
+
+            {/* Resumen de la consulta */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-blue-300 mb-2">Resumen de tu necesidad</h3>
+              {summaryLoading ? (
+                <div className="text-gray-400 italic">Generando resumen...</div>
+              ) : summary ? (
+                <div className="bg-white/10 border border-blue-400/20 rounded-lg p-4 text-white whitespace-pre-line">
+                  {summary}
+                </div>
+              ) : (
+                <div className="text-gray-400 italic">No se pudo generar el resumen.</div>
+              )}
             </div>
 
             {/* Form */}
