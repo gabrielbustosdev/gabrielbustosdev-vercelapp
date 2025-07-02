@@ -8,6 +8,7 @@ import { ChatProvider } from "@/hooks/ChatContext";
 import React from "react";
 import Notice from "@/components/Notice";
 import { NoticeProvider } from "@/hooks/NoticeContext";
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -38,6 +39,7 @@ export default function RootLayout({
             {children}
             <Footer />
             <Chatbot />
+            <Analytics />
           </ChatProvider>
         </NoticeProvider>
       </body>
