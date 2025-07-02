@@ -1,5 +1,7 @@
 # gabrielbustosdev
 
+> **Nota:** Los servicios ofrecidos en esta página son únicamente demostrativos. Este sitio no representa una oferta comercial real, sino un portafolio personal y una muestra de capacidades técnicas. Cualquier interacción, incluido el chatbot, es solo con fines de ejemplo y referencia.
+
 Sitio web profesional de Gabriel Bustos, desarrollador web y consultor en automatización e inteligencia artificial.  
 Incluye un chatbot inteligente, formularios de contacto avanzados y un flujo optimizado para la captación de leads y consultas.
 

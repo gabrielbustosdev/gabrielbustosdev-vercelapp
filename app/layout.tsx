@@ -5,6 +5,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Chatbot from "@/components/Chatbot";
 import { ChatProvider } from "@/hooks/ChatContext";
+import React from "react";
+import Notice from "@/components/Notice";
+import { NoticeProvider } from "@/hooks/NoticeContext";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,16 +28,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
   return (
     <html lang="es">
       <body className={inter.className}>
-        <ChatProvider>
-          <Navbar />
-          {children}
-          <Footer />
-          <Chatbot />
-        </ChatProvider>
+        <NoticeProvider>
+          <ChatProvider>
+            <Navbar />
+            <Notice />
+            {children}
+            <Footer />
+            <Chatbot />
+          </ChatProvider>
+        </NoticeProvider>
       </body>
     </html>
   );
