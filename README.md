@@ -158,7 +158,11 @@ Por favor, abre un issue o pull request siguiendo las buenas prácticas y conven
 
 ## Licencia
 
-Este proyecto es de uso privado para la marca personal de Gabriel Bustos.  
+Este proyecto es de uso privado para la marca personal de Gabriel Bustos. El código fuente se publica únicamente con fines educativos y de referencia.
+
+- **Prohibido el uso comercial:** No está permitido utilizar, redistribuir, vender o modificar este código con fines comerciales o lucrativos.
+- **Licencia:** [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](LICENSE)
+
 Para usos comerciales o colaboraciones, contacta a través del formulario del sitio.
 
 ---
