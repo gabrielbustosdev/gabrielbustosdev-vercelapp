@@ -12,7 +12,7 @@ export function withValidation<T>(schema: ZodSchema<T>, handler: (data: T) => Pr
       const body = await req.json()
       const result = schema.safeParse(body)
       if (!result.success) {
-        return NextResponse.json({ error: 'Datos inválidos', details: result.error.issues }, { status: 400 })
+        return NextResponse.json({ error: 'Datos inválidos', details: result.error.errors }, { status: 400 })
       }
       return handler(result.data)
     } catch (error) {

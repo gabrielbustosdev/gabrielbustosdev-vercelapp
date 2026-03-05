@@ -61,7 +61,7 @@ export default function QuoteModal({
     });
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof QuoteForm, string>> = {};
-      result.error.issues.forEach((err) => {
+      result.error.errors.forEach((err) => {
         const field = err.path[0] as keyof QuoteForm;
         if (!fieldErrors[field]) fieldErrors[field] = err.message;
       });

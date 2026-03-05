@@ -45,7 +45,7 @@ export default function ContactoPage() {
     const result = ContactFormSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof ContactForm, string>> = {};
-      result.error.issues.forEach((err) => {
+      result.error.errors.forEach((err) => {
         const field = err.path[0] as keyof ContactForm;
         if (!fieldErrors[field]) fieldErrors[field] = err.message;
       });

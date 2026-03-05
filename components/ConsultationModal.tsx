@@ -59,7 +59,7 @@ export default function ConsultationModal({
     const result = ConsultationFormSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof ConsultationForm, string>> = {};
-      result.error.issues.forEach((err) => {
+      result.error.errors.forEach((err) => {
         const field = err.path[0] as keyof ConsultationForm;
         if (!fieldErrors[field]) fieldErrors[field] = err.message;
       });
