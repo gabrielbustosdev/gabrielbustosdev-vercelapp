@@ -1,0 +1,13 @@
+﻿components/Chatbot.tsx(27,5): error TS2339: Property 'input' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(28,5): error TS2339: Property 'handleInputChange' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(29,5): error TS2339: Property 'handleSubmit' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(32,5): error TS2339: Property 'reload' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(34,15): error TS2345: Argument of type '{ api: string; initialMessages: { id: string; role: "assistant"; content: string; }[]; }' is not assignable to parameter of type 'UseChatOptions<UIMessage<unknown, UIDataTypes, UITools>> | undefined'.
+components/Chatbot.tsx(48,16): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(49,82): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(51,52): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(61,23): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(62,94): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(64,64): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(79,86): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(189,91): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.

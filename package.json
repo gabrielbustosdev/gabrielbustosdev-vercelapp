@@ -9,16 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@openrouter/ai-sdk-provider": "^2.2.3",
+    "@openrouter/ai-sdk-provider": "^0.7.2",
     "@vercel/analytics": "^1.5.0",
-    "ai": "^6.0.116",
+    "ai": "^4.3.16",
     "googleapis": "^150.0.1",
     "lucide-react": "^0.525.0",
     "motion": "^12.19.2",
     "next": "^16.1.6",
     "nodemailer": "^7.0.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

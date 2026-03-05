@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import type { ContactForm } from "@/schemas/form-schemas"
-import { ContactFormSchema } from "@/schemas/form-schemas"
-import type { ZodIssue } from "zod"
-import { useChatContext } from "@/hooks/ChatContext"
+import { useState } from "react";
+import type { ContactForm } from "@/schemas/form-schemas";
+import { ContactFormSchema } from "@/schemas/form-schemas";
+import type { ZodIssue } from "zod";
+import { useChatContext } from "@/hooks/ChatContext";
 
 export default function ContactoPage() {
   const [formData, setFormData] = useState<ContactForm>({
@@ -16,34 +16,42 @@ export default function ContactoPage() {
     company: "",
     project: undefined,
     message: "",
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
-  const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ContactForm, string>>
+  >({});
   const { openChat } = useChatContext();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setSubmitStatus("idle")
-    setErrors({})
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus("idle");
+    setErrors({});
 
     // Validación básica en frontend para UX
-    const result = ContactFormSchema.safeParse(formData)
+    const result = ContactFormSchema.safeParse(formData);
     if (!result.success) {
-      const fieldErrors: Partial<Record<keyof ContactForm, string>> = {}
-      result.error.errors.forEach(err => {
-        const field = err.path[0] as keyof ContactForm
-        if (!fieldErrors[field]) fieldErrors[field] = err.message
-      })
-      setErrors(fieldErrors)
-      setIsSubmitting(false)
-      return
+      const fieldErrors: Partial<Record<keyof ContactForm, string>> = {};
+      result.error.issues.forEach((err) => {
+        const field = err.path[0] as keyof ContactForm;
+        if (!fieldErrors[field]) fieldErrors[field] = err.message;
+      });
+      setErrors(fieldErrors);
+      setIsSubmitting(false);
+      return;
     }
 
     try {
@@ -53,10 +61,10 @@ export default function ContactoPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      })
+      });
 
       if (response.ok) {
-        setSubmitStatus("success")
+        setSubmitStatus("success");
         setFormData({
           type: "contact",
           name: "",
@@ -64,27 +72,27 @@ export default function ContactoPage() {
           company: "",
           project: undefined,
           message: "",
-        })
+        });
       } else {
         // Manejar errores de validación del backend
-        const data = await response.json()
+        const data = await response.json();
         if (data.details && Array.isArray(data.details)) {
-          const fieldErrors: Partial<Record<keyof ContactForm, string>> = {}
+          const fieldErrors: Partial<Record<keyof ContactForm, string>> = {};
           data.details.forEach((err: ZodIssue) => {
-            const field = err.path[0] as keyof ContactForm
-            if (!fieldErrors[field]) fieldErrors[field] = err.message
-          })
-          setErrors(fieldErrors)
+            const field = err.path[0] as keyof ContactForm;
+            if (!fieldErrors[field]) fieldErrors[field] = err.message;
+          });
+          setErrors(fieldErrors);
         }
-        setSubmitStatus("error")
+        setSubmitStatus("error");
       }
     } catch (error) {
-      console.error("Error:", error)
-      setSubmitStatus("error")
+      console.error("Error:", error);
+      setSubmitStatus("error");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-zinc-900 to-slate-800 pt-16">
@@ -93,24 +101,28 @@ export default function ContactoPage() {
         <div className="text-center mb-16">
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6">
             Hablemos de tu{" "}
-            <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent">Proyecto</span>
+            <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent">
+              Proyecto
+            </span>
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            ¿Tienes una idea innovadora? Estoy aquí para ayudarte a convertirla en realidad
+            ¿Tienes una idea innovadora? Estoy aquí para ayudarte a convertirla
+            en realidad
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Form */}
           <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-8">
-            <h2 className="text-2xl font-bold text-white mb-6">Envíame un mensaje</h2>
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-6"
-              noValidate
-            >
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Envíame un mensaje
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
                   Nombre completo
                 </label>
                 <input
@@ -123,11 +135,16 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="Tu nombre"
                 />
-                {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-red-400 text-xs mt-1">{errors.name}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
                   Email
                 </label>
                 <input
@@ -140,11 +157,16 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="tu@email.com"
                 />
-                {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-red-400 text-xs mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-2">
+                <label
+                  htmlFor="company"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
                   Empresa (opcional)
                 </label>
                 <input
@@ -156,11 +178,16 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                   placeholder="Tu empresa"
                 />
-                {errors.company && <p className="text-red-400 text-xs mt-1">{errors.company}</p>}
+                {errors.company && (
+                  <p className="text-red-400 text-xs mt-1">{errors.company}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="project" className="block text-sm font-medium text-gray-300 mb-2">
+                <label
+                  htmlFor="project"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
                   Tipo de proyecto
                 </label>
                 <select
@@ -176,11 +203,16 @@ export default function ContactoPage() {
                   <option value="consulting">Consultoría</option>
                   <option value="other">Otro</option>
                 </select>
-                {errors.project && <p className="text-red-400 text-xs mt-1">{errors.project}</p>}
+                {errors.project && (
+                  <p className="text-red-400 text-xs mt-1">{errors.project}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
+                <label
+                  htmlFor="message"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
                   Mensaje
                 </label>
                 <textarea
@@ -193,20 +225,25 @@ export default function ContactoPage() {
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
                   placeholder="Cuéntame sobre tu proyecto..."
                 ></textarea>
-                {errors.message && <p className="text-red-400 text-xs mt-1">{errors.message}</p>}
+                {errors.message && (
+                  <p className="text-red-400 text-xs mt-1">{errors.message}</p>
+                )}
               </div>
 
               {/* Status Messages */}
               {submitStatus === "success" && (
                 <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
-                  <p className="text-green-400 text-center">¡Mensaje enviado exitosamente! Te contactaré pronto.</p>
+                  <p className="text-green-400 text-center">
+                    ¡Mensaje enviado exitosamente! Te contactaré pronto.
+                  </p>
                 </div>
               )}
 
               {submitStatus === "error" && (
                 <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
                   <p className="text-red-400 text-center">
-                    Hubo un error al enviar el mensaje. Por favor, intenta nuevamente.
+                    Hubo un error al enviar el mensaje. Por favor, intenta
+                    nuevamente.
                   </p>
                 </div>
               )}
@@ -224,11 +261,17 @@ export default function ContactoPage() {
           {/* Contact Info */}
           <div className="space-y-8">
             <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-8">
-              <h3 className="text-xl font-bold text-white mb-6">Información de contacto</h3>
+              <h3 className="text-xl font-bold text-white mb-6">
+                Información de contacto
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mr-4">
-                    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="w-5 h-5 text-blue-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
                       <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                       <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                     </svg>
@@ -241,7 +284,11 @@ export default function ContactoPage() {
 
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mr-4">
-                    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="w-5 h-5 text-blue-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
@@ -257,7 +304,11 @@ export default function ContactoPage() {
 
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mr-4">
-                    <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="w-5 h-5 text-blue-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
@@ -274,9 +325,12 @@ export default function ContactoPage() {
             </div>
 
             <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-8">
-              <h3 className="text-xl font-bold text-white mb-4">¿Prefieres hablar directamente?</h3>
+              <h3 className="text-xl font-bold text-white mb-4">
+                ¿Prefieres hablar directamente?
+              </h3>
               <p className="text-gray-300 mb-6">
-                Mi agente de IA está disponible 24/7 para responder tus preguntas y agendar una llamada.
+                Mi agente de IA está disponible 24/7 para responder tus
+                preguntas y agendar una llamada.
               </p>
               <button
                 className="w-full py-3 rounded-lg transition-all duration-300 font-semibold bg-gradient-to-r from-blue-500 to-slate-600 text-white hover:from-blue-600 hover:to-slate-700"
@@ -289,5 +343,5 @@ export default function ContactoPage() {
         </div>
       </div>
     </main>
-  )
+  );
 }

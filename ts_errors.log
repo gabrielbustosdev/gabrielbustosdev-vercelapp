@@ -1,0 +1,30 @@
+﻿app/api/chat/route.ts(68,7): error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & (Prompt & { model: LanguageModel; tools?: ToolSet | undefined; toolChoice?: ToolChoice<ToolSet> | undefined; ... 23 more ...; _internal?: { ...; } | undefined; })'.
+app/api/chat/route.ts(76,19): error TS2551: Property 'toDataStreamResponse' does not exist on type 'StreamTextResult<ToolSet, Output<string, string, never>>'. Did you mean 'toTextStreamResponse'?
+app/api/summary/route.ts(50,7): error TS2353: Object literal may only specify known properties, and 'maxTokens' does not exist in type 'CallSettings & { system?: string | SystemModelMessage | SystemModelMessage[] | undefined; } & { messages: ModelMessage[]; prompt?: undefined; } & { ...; }'.
+app/contacto/page.tsx(40,20): error TS2339: Property 'errors' does not exist on type 'ZodError<{ type: "contact"; name: string; email: string; message: string; company?: string | undefined; project?: "web" | "other" | "ai" | "consulting" | undefined; }>'.
+app/contacto/page.tsx(40,35): error TS7006: Parameter 'err' implicitly has an 'any' type.
+components/Chatbot.tsx(27,5): error TS2339: Property 'input' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(28,5): error TS2339: Property 'handleInputChange' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(29,5): error TS2339: Property 'handleSubmit' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(32,5): error TS2339: Property 'reload' does not exist on type 'UseChatHelpers<UIMessage<unknown, UIDataTypes, UITools>>'.
+components/Chatbot.tsx(34,15): error TS2345: Argument of type '{ api: string; initialMessages: { id: string; role: "assistant"; content: string; }[]; }' is not assignable to parameter of type 'UseChatOptions<UIMessage<unknown, UIDataTypes, UITools>> | undefined'.
+components/Chatbot.tsx(48,16): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(49,82): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(51,52): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(61,23): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(62,94): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(64,64): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(79,86): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/Chatbot.tsx(189,91): error TS2339: Property 'content' does not exist on type 'UIMessage<unknown, UIDataTypes, UITools>'.
+components/ConsultationModal.tsx(49,20): error TS2339: Property 'errors' does not exist on type 'ZodError<{ type: "consultation"; name: string; email: string; projectType: string; preferredDate: string; preferredTime: string; phone?: string | undefined; company?: string | undefined; message?: string | undefined; summary?: string | undefined; }>'.
+components/ConsultationModal.tsx(49,35): error TS7006: Parameter 'err' implicitly has an 'any' type.
+components/QuoteModal.tsx(49,20): error TS2339: Property 'errors' does not exist on type 'ZodError<{ type: "quote"; name: string; email: string; message: string; company?: string | undefined; phone?: string | undefined; service?: { title: string; description: string; price: string; } | undefined; }>'.
+components/QuoteModal.tsx(49,35): error TS7006: Parameter 'err' implicitly has an 'any' type.
+lib/middleware.ts(3,8): error TS2724: '"ai"' has no exported member named 'LanguageModelV1'. Did you mean 'LanguageModel'?
+lib/middleware.ts(4,8): error TS2724: '"ai"' has no exported member named 'LanguageModelV1Middleware'. Did you mean 'LanguageModelMiddleware'?
+lib/middleware.ts(98,29): error TS7031: Binding element 'params' implicitly has an 'any' type.
+lib/middleware.ts(127,26): error TS7031: Binding element 'doGenerate' implicitly has an 'any' type.
+lib/middleware.ts(127,38): error TS7031: Binding element 'params' implicitly has an 'any' type.
+lib/middleware.ts(175,26): error TS7031: Binding element 'doGenerate' implicitly has an 'any' type.
+lib/middleware.ts(175,38): error TS7031: Binding element 'params' implicitly has an 'any' type.
+middleware/form-middleware.ts(15,84): error TS2339: Property 'errors' does not exist on type 'ZodError<T>'.
