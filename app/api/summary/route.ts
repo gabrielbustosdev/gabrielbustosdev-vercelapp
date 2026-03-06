@@ -12,7 +12,7 @@ const systemPrompt = `Eres un asistente experto en análisis de necesidades de c
 - Si hay información clave faltante, indícalo al final del resumen.
 `;
 
-const MODEL = 'deepseek/deepseek-r1-0528-qwen3-8b:free';
+const MODEL = 'meta-llama/llama-3.2-3b-instruct:free';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,8 +32,14 @@ export async function POST(req: NextRequest) {
       throw new Error('Falta la variable de entorno OPENROUTER_API_KEY_SUMMARY');
     }
 
-    // Crear instancia del modelo con la API key específica
-    const openrouter = createOpenRouter({ apiKey });
+    // Crear instancia del modelo con headers recomendados
+    const openrouter = createOpenRouter({ 
+      apiKey,
+      headers: {
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+        'X-OpenRouter-Title': 'Gabriel Bustos Portfolio Summary Service',
+      }
+    });
     const summaryModel = openrouter(MODEL);
 
     // Construir el prompt de usuario con la conversación

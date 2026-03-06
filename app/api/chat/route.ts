@@ -40,12 +40,17 @@ export async function POST(req: NextRequest) {
       throw new Error('OPENROUTER_API_KEY no está configurada')
     }
 
-    // Crear el modelo base
+    // Crear el modelo base con headers recomendados
     const openrouter = createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY,
+      headers: {
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+        'X-OpenRouter-Title': 'Gabriel Bustos Portfolio',
+      }
     })
     
-    const baseModel = openrouter('deepseek/deepseek-r1-0528-qwen3-8b:free')
+    // Usar un modelo gratuito más estándar y estable
+    const baseModel = openrouter('meta-llama/llama-3.2-3b-instruct:free')
 
     // Aplicar middleware con RAG y Guardrails
     const enhancedModel = createGabrielBustosMiddleware(baseModel, {
@@ -67,17 +72,12 @@ export async function POST(req: NextRequest) {
       system: systemPrompt,
       maxTokens: 1000,
       temperature: 0.7,
-      // Configuraciones adicionales para mejorar la calidad
-      topP: 0.9,
-      frequencyPenalty: 0.1,
-      presencePenalty: 0.1,
     })
 
     return result.toDataStreamResponse()
   } catch (error) {
     console.error('[API] Error:', error)
     
-    // Log del error para monitoring
     return new Response(
       JSON.stringify({ 
         error: 'Error interno del servidor',
