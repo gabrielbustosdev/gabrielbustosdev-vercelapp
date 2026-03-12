@@ -57,8 +57,7 @@ export async function POST(req: NextRequest) {
       temperature: 0.3,
     });
 
-    const summary = result.text || '';
-    return NextResponse.json({ summary });
+    return NextResponse.json({ summary: result.text });
   } catch (error: unknown) {
     let message = 'Error interno';
     if (error && typeof error === 'object' && 'message' in error && typeof (error as { message?: unknown }).message === 'string') {

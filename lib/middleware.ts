@@ -33,18 +33,19 @@ interface LogEntry {
 const logStore: LogEntry[] = []
 
 // Función auxiliar para extraer el último mensaje del usuario
-function getLastUserMessageText(prompt: unknown[]): string {
+function getLastUserMessageText(prompt: any[]): string {
+  if (!prompt || !Array.isArray(prompt)) return ''
   for (let i = prompt.length - 1; i >= 0; i--) {
-    const message = prompt[i] as { role?: string; content?: unknown }
+    const message = prompt[i]
     if (message.role === 'user') {
       const content = message.content
       if (typeof content === 'string') {
         return content
       }
       if (Array.isArray(content)) {
-        const textPart = content.find((part: unknown) => 
-          typeof part === 'object' && part !== null && 'type' in part && part.type === 'text'
-        ) as { text?: string } | undefined
+        const textPart = content.find((part: any) => 
+          part.type === 'text'
+        )
         return textPart?.text || ''
       }
     }
@@ -53,12 +54,12 @@ function getLastUserMessageText(prompt: unknown[]): string {
 }
 
 // Función auxiliar para agregar texto al último mensaje del usuario
-function addToLastUserMessage(params: { prompt: unknown[] }, text: string) {
+function addToLastUserMessage(params: any, text: string) {
   const enhancedPrompt = [...params.prompt]
   const lastUserIndex = enhancedPrompt.length - 1
   
   if (lastUserIndex >= 0) {
-    const lastMessage = enhancedPrompt[lastUserIndex] as { role?: string; content?: unknown }
+    const lastMessage = enhancedPrompt[lastUserIndex]
     if (lastMessage.role === 'user') {
       const currentContent = lastMessage.content
       
@@ -68,13 +69,13 @@ function addToLastUserMessage(params: { prompt: unknown[] }, text: string) {
           content: `${currentContent}\n\n${text}`
         }
       } else if (Array.isArray(currentContent)) {
-        const textIndex = currentContent.findIndex((part: unknown) => 
-          typeof part === 'object' && part !== null && 'type' in part && part.type === 'text'
+        const textPartIndex = currentContent.findIndex((part: any) => 
+          part.type === 'text'
         )
-        if (textIndex >= 0) {
+        if (textPartIndex >= 0) {
           const newContent = [...currentContent]
-          const textPart = newContent[textIndex] as { type: string; text: string }
-          newContent[textIndex] = {
+          const textPart = newContent[textPartIndex]
+          newContent[textPartIndex] = {
             ...textPart,
             text: `${textPart.text}\n\n${text}`
           }
@@ -96,7 +97,7 @@ function addToLastUserMessage(params: { prompt: unknown[] }, text: string) {
 // Middleware de RAG
 const ragMiddleware: LanguageModelV1Middleware = {
   transformParams: async ({ params }) => {
-    const lastUserMessageText = getLastUserMessageText(params.prompt as unknown[])
+    const lastUserMessageText = getLastUserMessageText(params.prompt)
     
     if (!lastUserMessageText) {
       return params
@@ -118,7 +119,7 @@ INSTRUCCIONES IMPORTANTES:
 - No inventes precios, fechas específicas o detalles técnicos no mencionados en el contexto
 - Si no tienes información suficiente, sé honesto al respecto y ofrece alternativas de contacto`
 
-    return addToLastUserMessage(params as { prompt: unknown[] }, instruction) as typeof params
+    return addToLastUserMessage(params, instruction)
   }
 }
 
@@ -131,7 +132,7 @@ const guardrailMiddleware: LanguageModelV1Middleware = {
       return result
     }
     
-    const query = getLastUserMessageText(params.prompt as unknown[])
+    const query = getLastUserMessageText(params.prompt)
     const guardrailResults = validateResponse(result.text, query)
     const overallAction = getOverallAction(guardrailResults)
     
@@ -174,7 +175,6 @@ const guardrailMiddleware: LanguageModelV1Middleware = {
 const loggingMiddleware: LanguageModelV1Middleware = {
   wrapGenerate: async ({ doGenerate, params }) => {
     console.log('[Gabriel Bustos Middleware] doGenerate called')
-    console.log(`[Gabriel Bustos Middleware] params: ${JSON.stringify(params, null, 2)}`)
     
     const result = await doGenerate()
     
